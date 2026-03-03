@@ -50,7 +50,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
-
 // JWT Authentication
 builder.Services.AddAuthentication(options =>
 {
@@ -70,7 +69,7 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = "http://localhost:5181/",
 
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes("tyugkkuytdtyyv4568yyugyvuy67585u67ufuyfyug6757rfgyigiiu"))
+            Encoding.UTF8.GetBytes("tyugyughyghghvbhvhjbhjnjnnjvioioppmnbvh"))
     };
 });
 
@@ -90,5 +89,18 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var roles = new[] { "Admin", "User" };
+
+    foreach (var role in roles)
+    {
+        if (!await roleManager.RoleExistsAsync(role))
+        {
+            await roleManager.CreateAsync(new IdentityRole(role));
+        }
+    }
+}
 
 app.Run();

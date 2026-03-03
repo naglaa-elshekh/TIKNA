@@ -182,32 +182,6 @@ namespace TIKNA.Migrations
                     b.HasIndex("CustomerId");
 
                     b.ToTable("Products");
-
-                    b.HasData(
-                        new
-                        {
-                            ProductId = 1,
-                            CustomerId = 1,
-                            Description = "Core i7 - 16GB RAM - 512GB SSD",
-                            Name = "Dell Inspiron 15",
-                            Price = 32000m
-                        },
-                        new
-                        {
-                            ProductId = 2,
-                            CustomerId = 1,
-                            Description = "Core i5 - 8GB RAM - 256GB SSD",
-                            Name = "HP Pavilion 14",
-                            Price = 24000m
-                        },
-                        new
-                        {
-                            ProductId = 3,
-                            CustomerId = 1,
-                            Description = "Core i5 - 8GB RAM - 256GB SSD",
-                            Name = "HP EliteBook 840",
-                            Price = 1500m
-                        });
                 });
 
             modelBuilder.Entity("TIKNA.Models.ApplicationUser", b =>

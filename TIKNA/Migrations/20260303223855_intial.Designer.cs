@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace TIKNA.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260228133518_intial")]
+    [Migration("20260303223855_intial")]
     partial class intial
     {
         /// <inheritdoc />
@@ -157,6 +157,36 @@ namespace TIKNA.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Product", b =>
+                {
+                    b.Property<int>("ProductId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductId"));
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("ProductId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.ToTable("Products");
+                });
+
             modelBuilder.Entity("TIKNA.Models.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
@@ -254,6 +284,153 @@ namespace TIKNA.Migrations
                     b.ToTable("Customers");
                 });
 
+            modelBuilder.Entity("TIKNA.Models.MaintenanceRequest", b =>
+                {
+                    b.Property<int>("MaintenanceRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaintenanceRequestId"));
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IssueDescription")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("RequestDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("MaintenanceRequestId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("MaintenanceRequests");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.Order", b =>
+                {
+                    b.Property<int>("OrderId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderId"));
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OrderDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("OrderId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.ToTable("Orders");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.OrderProd", b =>
+                {
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("OrderId", "ProductId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("OrderProducts");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.Payment", b =>
+                {
+                    b.Property<int>("PaymentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PaymentId"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("MaintenanceRequestId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("RentalId")
+                        .HasColumnType("int");
+
+                    b.HasKey("PaymentId");
+
+                    b.HasIndex("MaintenanceRequestId")
+                        .IsUnique()
+                        .HasFilter("[MaintenanceRequestId] IS NOT NULL");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique()
+                        .HasFilter("[OrderId] IS NOT NULL");
+
+                    b.HasIndex("RentalId")
+                        .IsUnique()
+                        .HasFilter("[RentalId] IS NOT NULL");
+
+                    b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.Rental", b =>
+                {
+                    b.Property<int>("RentalId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RentalId"));
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("RentalId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("Rentals");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -305,6 +482,17 @@ namespace TIKNA.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Product", b =>
+                {
+                    b.HasOne("TIKNA.Models.Customer", "Owner")
+                        .WithMany("Products")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
             modelBuilder.Entity("TIKNA.Models.Customer", b =>
                 {
                     b.HasOne("TIKNA.Models.ApplicationUser", "ApplicationUser")
@@ -316,9 +504,134 @@ namespace TIKNA.Migrations
                     b.Navigation("ApplicationUser");
                 });
 
+            modelBuilder.Entity("TIKNA.Models.MaintenanceRequest", b =>
+                {
+                    b.HasOne("TIKNA.Models.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Product", "Product")
+                        .WithMany("MaintenanceRequests")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.Order", b =>
+                {
+                    b.HasOne("TIKNA.Models.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.OrderProd", b =>
+                {
+                    b.HasOne("TIKNA.Models.Order", "Order")
+                        .WithMany("OrderProducts")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Product", "Product")
+                        .WithMany("OrderProducts")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.Payment", b =>
+                {
+                    b.HasOne("TIKNA.Models.MaintenanceRequest", "MaintenanceRequest")
+                        .WithOne("Payment")
+                        .HasForeignKey("TIKNA.Models.Payment", "MaintenanceRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TIKNA.Models.Order", "Order")
+                        .WithOne("Payment")
+                        .HasForeignKey("TIKNA.Models.Payment", "OrderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TIKNA.Models.Rental", "Rental")
+                        .WithOne("Payment")
+                        .HasForeignKey("TIKNA.Models.Payment", "RentalId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("MaintenanceRequest");
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Rental");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.Rental", b =>
+                {
+                    b.HasOne("TIKNA.Models.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Product", "Product")
+                        .WithMany("Rentals")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Product", b =>
+                {
+                    b.Navigation("MaintenanceRequests");
+
+                    b.Navigation("OrderProducts");
+
+                    b.Navigation("Rentals");
+                });
+
             modelBuilder.Entity("TIKNA.Models.ApplicationUser", b =>
                 {
                     b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.Customer", b =>
+                {
+                    b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.MaintenanceRequest", b =>
+                {
+                    b.Navigation("Payment")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TIKNA.Models.Order", b =>
+                {
+                    b.Navigation("OrderProducts");
+
+                    b.Navigation("Payment");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.Rental", b =>
+                {
+                    b.Navigation("Payment")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
