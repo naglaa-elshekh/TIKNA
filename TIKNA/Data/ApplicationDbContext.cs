@@ -18,7 +18,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         base.OnModelCreating(builder);
 
-builder.Entity<Product>().HasData(
+//builder.Entity<Product>().HasData(
 
 //    new Product
 //    {
@@ -40,15 +40,15 @@ builder.Entity<Product>().HasData(
 //        CustomerId = 1
 //    },
 
-new Product
-        {
-            ProductId = 3,
-            Name = "HP EliteBook 840",
-            Description = "Core i5 - 8GB RAM - 256GB SSD",
-            Price = 1500,
-            CustomerId = 1
-        }
-);
+//new Product
+//        {
+//            ProductId = 3,
+//            Name = "HP EliteBook 840",
+//            Description = "Core i5 - 8GB RAM - 256GB SSD",
+//            Price = 1500,
+//            CustomerId = 1
+//        }
+//);
 
         builder.Entity<OrderProd>()
     .HasKey(op => new { op.OrderId, op.ProductId });
