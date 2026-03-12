@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Emit;
 using TIKNA.Models;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
@@ -52,6 +53,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<OrderProd>()
     .HasKey(op => new { op.OrderId, op.ProductId });
+
+
+
+        builder.Entity<OrderProd>()
+        .HasOne(op => op.Order)
+        .WithMany(o => o.OrderProducts)
+        .HasForeignKey(op => op.OrderId);
 
         builder.Entity<Payment>()
      .HasOne(p => p.Order)
