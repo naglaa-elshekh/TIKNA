@@ -8,6 +8,8 @@ public class Product
     public string Description { get; set; }
 
     public decimal Price { get; set; }
+
+    public string? ImageUrl { get; set; } // خليناه nullable عشان لو منتج ملوش صورة
     public int CustomerId { get; set; }
     public Customer Owner { get; set; }
 

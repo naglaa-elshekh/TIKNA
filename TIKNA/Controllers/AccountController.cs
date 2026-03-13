@@ -21,41 +21,41 @@ public class AccountController : ControllerBase
         _configuration = configuration;
     }
 
-    [HttpPost("Register")]
+    [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterDto dto)
     {
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
+        // 1. إنشاء كائن المستخدم (Identity User)
+        var user = new ApplicationUser
         {
-            // 1. إنشاء حساب الدخول
-            var user = new ApplicationUser { UserName = dto.UserName, Email = dto.Email };
-            var result = await _userManager.CreateAsync(user, dto.Password);
+            UserName = dto.Email,
+            Email = dto.Email,
+            // ضيفي أي بيانات إضافية موجودة في الـ ApplicationUser
+        };
 
-            if (!result.Succeeded) return BadRequest(result.Errors);
+        // 2. حفظ المستخدم وتشفير الباسورد
+        var result = await _userManager.CreateAsync(user, dto.Password);
 
-            // 2. إعطاء صلاحية User (التي تمنع تداخلها مع Admin لاحقاً)
-            await _userManager.AddToRoleAsync(user, "User");
-
-            // 3. إنشاء بيانات العميل المرتبطة (الربط يتم هنا عبر Id المستخدم)
+        if (result.Succeeded)
+        {
+            // 3. الربط الآلي: إنشاء سطر في جدول الـ Customer
+            // هنا بنربط الـ GUID (user.Id) بالـ Customer الجديد
             var customer = new Customer
             {
-                Name = dto.Name,
-                Phone = dto.Phone,
-                Address = dto.Address,
-                ApplicationUserId = user.Id
+                ApplicationUserId = user.Id, // ده الـ GUID اللي جاي من الـ Identity
+                Name = dto.Name,         // تأكدي إن الاسم موجود في الـ DTO
+                Phone = dto.Phone
             };
 
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();
 
-            await transaction.CommitAsync();
-            return Ok("Created Successfully");
+            // 4. (اختياري) إضافة دور الـ User العادي
+            // await _userManager.AddToRoleAsync(user, "User");
+
+            return Ok(new { Message = "تم التسجيل بنجاح وإنشاء بروفايل العميل" });
         }
-        catch
-        {
-            await transaction.RollbackAsync();
-            return BadRequest("Error occurred");
-        }
+
+        return BadRequest(result.Errors);
     }
 
     [HttpPost("Login")]

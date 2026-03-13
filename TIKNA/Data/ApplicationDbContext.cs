@@ -24,6 +24,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 //    {
 //        ProductId = 1,
 //        Name = "Dell Inspiron 15",
+
 //        Description = "Core i7 - 16GB RAM - 512GB SSD",
 //        Price = 32000,
 

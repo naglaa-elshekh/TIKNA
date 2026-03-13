@@ -12,6 +12,7 @@ builder.Services.AddControllers();
 
 // Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddAuthorization();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "TIKNA API", Version = "v1" });
@@ -102,5 +103,7 @@ using (var scope = app.Services.CreateScope())
         }
     }
 }
+
+app.UseStaticFiles();
 
 app.Run();
