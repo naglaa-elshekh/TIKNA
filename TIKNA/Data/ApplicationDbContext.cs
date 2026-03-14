@@ -15,6 +15,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<MaintenanceRequest> MaintenanceRequests { get; set; }
     public DbSet<Payment> Payments { get; set; }
 
+    public DbSet<Cart> Carts { get; set; }
+    public DbSet<CartItem> CartItems { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -67,12 +70,38 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .WithMany(p => p.OrderProducts)
             .HasForeignKey(op => op.ProductId)
             .OnDelete(DeleteBehavior.Restrict);
-        
-      
+
+
+
+
+        builder.Entity<Cart>()
+            .HasOne(c => c.Customer)
+            .WithOne()
+            .HasForeignKey<Cart>(c => c.CustomerId);
+
+        // ربط أصناف السلة بالسلة (هنا اللي كان فيه المشكلة)
+        builder.Entity<CartItem>()
+            .HasOne(ci => ci.Cart)          // لازم يكون اسم الـ Property في CartItem هو Cart
+            .WithMany(c => c.CartItems)     // لازم يكون اسم الـ Collection في Cart هو CartItems
+            .HasForeignKey(ci => ci.CartId)
+            .OnDelete(DeleteBehavior.ClientSetNull); // حل أمان عشان إيرور الـ Migration
+
+        // ربط أصناف السلة بالمنتج
+        builder.Entity<CartItem>()
+            .HasOne(ci => ci.Product)
+            .WithMany()
+            .HasForeignKey(ci => ci.ProductId);
+
+
         // ===========================
         builder.Entity<Product>()
             .Property(p => p.Price)
             .HasPrecision(18, 2);
+
+        builder.Entity<Order>()
+           .Property(p => p.TotalPrice)
+           .HasPrecision(18, 2);
+
 
         builder.Entity<OrderProd>()
             .Property(op => op.UnitPrice)

@@ -14,6 +14,11 @@ using TIKNA.Models;
 
         public DateTime OrderDate { get; set; }
 
+        public decimal TotalPrice { get; set; }
+
+        public string Status { get; set; }
+
+
         // علاقة Many-to-Many مع المنتجات
         public ICollection<OrderProd> OrderProducts { get; set; }
 
