@@ -15,7 +15,7 @@ namespace TIKNA.Models
         public string Phone { get; set; }
 
         [Required]
-        public string Address { get; set; }
+        public string? Address { get; set; }
 
         // الربط مع الـ Identity
         public string ApplicationUserId { get; set; }

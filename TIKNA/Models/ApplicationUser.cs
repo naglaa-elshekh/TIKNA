@@ -9,7 +9,7 @@ public class ApplicationUser : IdentityUser
     public string UserType { get; set; } = "Individual";
 
     // حالة القبول: الشركات بتبدأ بـ false والأدمن يخليها true
-    public bool IsApproved { get; set; } = false;
+    public string? ApprovalStatus { get; set; } = "Pending";
 
 
     // الربط مع جدول العميل (للطالب فقط)

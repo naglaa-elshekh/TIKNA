@@ -1,37 +1,44 @@
 using System.ComponentModel.DataAnnotations;
 
-public class ProductCreateDto
+public class ProductDto
 {
-    [Required(ErrorMessage = "الاسم مطلوب")]
-    [StringLength(100)]
     public string Name { get; set; }
-    public string Description { get; set; }
-    [Range(0.1, 100000, ErrorMessage = "السعر لازم يكون بين 0.1 و 100,000")]
-
-
     public decimal Price { get; set; }
+    public int Quantity { get; set; }
+    public string Brand { get; set; }
+
+    // فئة اللاب (نوع الاستخدام)
+    [Required(ErrorMessage = "يرجى تحديد فئة اللاب (Gaming, Business, etc)")]
+    public string Category { get; set; }
+
+    // المواصفات الفنية
+    public string Processor { get; set; }
+    public string Ram { get; set; }
+    public string Storage { get; set; }
+    public string GraphicsCard { get; set; }
+    public string Screen { get; set; }
+    public string OS { get; set; }
+
     public IFormFile? ImageFile { get; set; }
-}
-public class ProductResponseDto
-{
-    public int Id { get; set; }
-    public string Name { get; set; }
-
-    public decimal Price { get; set; }
-    public string Description { get; set; }
-    public string? ImageUrl { get; set; }
-    public string OwnerName { get; set; } // اسم المالك بس بدل الكائن كله
+    public bool IsActive { get; set; } = true;
 }
 
-public class ProductUpdateDto
-{
-    // بنحط بس الحقول اللي "المنطقي" إنها تتغير
-    [Required(ErrorMessage = "الاسم مطلوب")]
-    [StringLength(100)]
-    public string Name { get; set; }
-    public string Description { get; set; }
-    [Range(0.1, 100000, ErrorMessage = "السعر لازم يكون بين 0.1 و 100,000")]
-    public decimal Price { get; set; }
-    //public string ImageUrl { get; set; }
-    //public int CategoryId { get; set; }
-}
+    public class ProductUpdateDto
+    {
+        public string Name { get; set; }
+        public decimal Price { get; set; }
+        public int Quantity { get; set; }
+        public string Brand { get; set; }
+        public string Category { get; set; }
+
+        // المواصفات الفنية (عشان نحدث الـ Description)
+        public string Processor { get; set; }
+        public string Ram { get; set; }
+        public string Storage { get; set; }
+        public string GraphicsCard { get; set; }
+        public string Screen { get; set; }
+        public string OS { get; set; }
+
+        public IFormFile? ImageFile { get; set; } // اختيارية في التعديل
+        public bool IsActive { get; set; }
+    }
