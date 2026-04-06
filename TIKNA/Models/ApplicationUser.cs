@@ -1,10 +1,17 @@
 ﻿using Microsoft.AspNetCore.Identity;
-namespace TIKNA.Models
+using TIKNA.Models;
+
+public class ApplicationUser : IdentityUser
 {
-    public class ApplicationUser:IdentityUser
-    {
-        public Customer? Customer { get; set; }
-    }
+    // الاسم الكامل متاح للأدمن والطالب
+    public string? FullName { get; set; }
 
+    public string UserType { get; set; } = "Individual";
+
+    // حالة القبول: الشركات بتبدأ بـ false والأدمن يخليها true
+    public bool IsApproved { get; set; } = false;
+
+
+    // الربط مع جدول العميل (للطالب فقط)
+    public Customer? Customer { get; set; }
 }
-

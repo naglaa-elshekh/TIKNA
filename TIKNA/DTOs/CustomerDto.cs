@@ -1,9 +1,13 @@
-﻿namespace TIKNA.DTOs
+﻿using System.ComponentModel.DataAnnotations;
+
+public class CustomerDto
 {
-    public class CustomerDto
-    {
-        public string Name { get; set; }
-        public string Phone { get; set; }
-        public string Address { get; set; }
-    }
+    [Required(ErrorMessage = "الاسم مطلوب")]
+    public string Name { get; set; }
+
+    [Required(ErrorMessage = "رقم التليفون مطلوب")]
+    public string Phone { get; set; }
+
+    // العنوان اختياري عشان الأدمن ملوش عنوان عميل
+    public string? Address { get; set; }
 }

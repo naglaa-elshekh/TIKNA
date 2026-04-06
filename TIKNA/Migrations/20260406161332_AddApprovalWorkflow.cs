@@ -5,14 +5,21 @@
 namespace TIKNA.Migrations
 {
     /// <inheritdoc />
-    public partial class EditOrder2 : Migration
+    public partial class AddApprovalWorkflow : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<bool>(
+                name: "IsApproved",
+                table: "AspNetUsers",
+                type: "bit",
+                nullable: false,
+                defaultValue: false);
+
             migrationBuilder.AddColumn<string>(
-                name: "Status",
-                table: "Orders",
+                name: "UserType",
+                table: "AspNetUsers",
                 type: "nvarchar(max)",
                 nullable: false,
                 defaultValue: "");
@@ -22,8 +29,12 @@ namespace TIKNA.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "Status",
-                table: "Orders");
+                name: "IsApproved",
+                table: "AspNetUsers");
+
+            migrationBuilder.DropColumn(
+                name: "UserType",
+                table: "AspNetUsers");
         }
     }
 }
