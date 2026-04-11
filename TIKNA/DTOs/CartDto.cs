@@ -1,12 +1,11 @@
-﻿// للإضافة للسلة
-public class AddToCartDTO
+﻿// 1. للإضافة للسلة أو المزامنة (Sync)
+public class CartItemUpdateDTO
 {
     public int ProductId { get; set; }
-    public int CustomerId { get; set; }
-    public int Quantity { get; set; } = 1;
+    public int Quantity { get; set; }
 }
 
-// لعرض السلة
+// 2. لعرض السلة (اللي هيروح للـ JavaScript عشان يرسم الصفحة)
 public class CartItemReadDTO
 {
     public int ProductId { get; set; }
@@ -14,12 +13,5 @@ public class CartItemReadDTO
     public decimal Price { get; set; }
     public string ImageUrl { get; set; }
     public int Quantity { get; set; }
-}
-
-
-public class UpdateQuantityDTO
-{
-    public int ProductId { get; set; }
-    public int CustomerId { get; set; }
-    public int NewQuantity { get; set; }
+    public decimal TotalLinePrice => Price * Quantity; // بيحسب إجمالي الصنف لوحده
 }
