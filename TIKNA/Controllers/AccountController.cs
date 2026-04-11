@@ -28,15 +28,13 @@ namespace TIKNA.Controllers
             _configuration = configuration;
         }
 
-        // 1. تسجيل مستخدم جديد
+        // 1. تسجيل مستخدم جديد (طالب أو شركة)
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            // 1. التأكد من عدم وجود المستخدم
             var userExists = await _userManager.FindByEmailAsync(dto.Email);
             if (userExists != null) return BadRequest("الإيميل مسجل بالفعل.");
 
-            // 2. إنشاء اليوزر
             var user = new ApplicationUser
             {
                 UserName = dto.Email,
@@ -56,24 +54,28 @@ namespace TIKNA.Controllers
             var result = await _userManager.CreateAsync(user, dto.Password);
             if (!result.Succeeded) return BadRequest(result.Errors);
 
-            // 3. إضافة الـ Role
-            // ... الكود القديم بتاع إضافة الـ Role ...
+            // --- التأكد من وجود الرول وإضافته (حل مشكلة الـ Null) ---
+            if (!await _roleManager.RoleExistsAsync(dto.UserType))
+            {
+                await _roleManager.CreateAsync(new IdentityRole(dto.UserType));
+            }
             await _userManager.AddToRoleAsync(user, dto.UserType);
 
-            // توليد التوكن فوراً عشان يعمل Auto-Login
             var token = await GenerateJwtToken(user);
 
             return Ok(new
             {
                 message = user.UserType.ToLower() == "company"
-? "أهلاً بك في لTIKNA! تم إنشاء حسابك ويمكنك تصفح لوحة التحكم، مع العلم أن تفعيل ميزات البيع والصيانة يتطلب موافقة الإدارة." :
-"تم التسجيل والدخول بنجاح.",
-                token = token,           // التوكن اللي هيخلي اليوزر يدخل علطول
+                    ? "أهلاً بك في TIKNA! تم إنشاء حسابك ويمكنك تصفح لوحة التحكم، مع العلم أن تفعيل ميزات البيع والصيانة يتطلب موافقة الإدارة."
+                    : "تم التسجيل والدخول بنجاح.",
+                token = token,
+                userId = user.Id,       // تم الإضافة لربط البروفايل
                 userType = user.UserType,
                 fullName = user.Name,
-                status = user.ApprovalStatus // هيرجع Pending للشركة و Approved للطالب
+                status = user.ApprovalStatus
             });
         }
+
         // 2. تسجيل الدخول
         [HttpPost("Login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
@@ -82,14 +84,17 @@ namespace TIKNA.Controllers
 
             if (user != null && await _userManager.CheckPasswordAsync(user, dto.Password))
             {
-
                 if (user.ApprovalStatus == "Rejected")
                     return BadRequest("تم رفض هذا الحساب.");
 
+                var roles = await _userManager.GetRolesAsync(user);
                 var token = await GenerateJwtToken(user);
+
                 return Ok(new
                 {
                     token,
+                    userId = user.Id,           // تم الإضافة
+                    role = roles.FirstOrDefault(), // حل مشكلة الـ Role Null
                     userType = user.UserType,
                     status = user.ApprovalStatus,
                     fullName = user.Name
@@ -110,7 +115,6 @@ namespace TIKNA.Controllers
         }
 
         // 4. موافقة أو رفض (للأدمن)
-
         [Authorize(Roles = "Admin")]
         [HttpPut("ApproveOrReject")]
         public async Task<IActionResult> ApproveOrReject(string userId, string status)
@@ -123,22 +127,19 @@ namespace TIKNA.Controllers
 
             if (result.Succeeded && status == "Approved")
             {
-                // نبعت الإيميل هنا
                 await SendApprovalEmail(user.Email, user.Name);
             }
 
             return Ok(new { message = $"تم تحديث الحالة إلى {status} وإرسال إشعار للمستخدم." });
         }
+
         private async Task SendApprovalEmail(string userEmail, string userName)
         {
-            // هنا بنستخدم مكتبة مثل MailKit أو SmtpClient
-            // للمثال، ده كود توضيحي للمحتوى:
             var subject = "تم قبول حسابك في منصة TIKNA";
             var body = $"أهلاً {userName}، نود إعلامك بأن الإدارة قد وافقت على طلب انضمامك. يمكنك الآن البدء في رفع منتجاتك واستلام طلبات الصيانة.";
-
-            // كود إرسال الإيميل الفعلي (بيحتاج إعدادات SMTP لـ Gmail أو Outlook)
-            // await _emailService.SendEmailAsync(userEmail, subject, body);
+            // هنا يتم استدعاء EmailService الفعلي
         }
+
         private async Task<string> GenerateJwtToken(ApplicationUser user)
         {
             var authClaims = new List<Claim>
@@ -156,15 +157,14 @@ namespace TIKNA.Controllers
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
 
             var token = new JwtSecurityToken(
-    issuer: _configuration["JWT:ValidIssuer"],      
-    audience: _configuration["JWT:ValidAudience"],  
-    expires: DateTime.Now.AddHours(12),
-    claims: authClaims,
-    signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
-);
+                issuer: _configuration["JWT:ValidIssuer"],
+                audience: _configuration["JWT:ValidAudience"],
+                expires: DateTime.Now.AddHours(12),
+                claims: authClaims,
+                signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+            );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
-
 }
