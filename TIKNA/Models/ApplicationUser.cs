@@ -13,7 +13,7 @@ namespace TIKNA.Models
         public string UserType { get; set; } // (Student, Company, Admin)
 
         [Required]
-        public string Address { get; set; }
+        public string? Address { get; set; }
 
         // بيانات الطالب (تكون Null لو المستخدم شركة)
         public string? University { get; set; }

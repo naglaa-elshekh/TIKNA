@@ -62,17 +62,16 @@ builder.Services.AddAuthentication(options =>
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
-        ValidateAudience = true,
+        ValidateAudience = true, // ·Ê Œ·Ì Ì œÌ false «·„‘ﬂ·… Â  Õ· „ƒﬁ « »” «·√›÷·  Ÿ»ÿÌÂ«
         ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
+        ValidateIssuerSigningKey = true, // ·«“„  ﬂÊ‰ true
+        ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
+        ValidAudience = builder.Configuration["JWT:ValidAudience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"]))
 
-        ValidIssuer = "http://localhost:4200/",
-        ValidAudience = "http://localhost:5181/",
-
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes("tyugyughyghghvbhvhjbhjnjnnjvioioppmnbvh"))
     };
 });
+
 
 var app = builder.Build();
 

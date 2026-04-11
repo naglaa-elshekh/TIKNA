@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace TIKNA.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260411172728_Problems")]
+    partial class Problems
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -50,19 +53,19 @@ namespace TIKNA.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "bd9cfbf2-37a3-4ea4-9ccc-9d46a7fb9b7d",
+                            Id = "a1dfd8b0-d218-48bc-b871-0c31bf16ec89",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = "b567f787-8f4e-4aa7-976e-d18c3c649b50",
+                            Id = "fbdf3fdc-7e12-472b-9018-1da1141686ce",
                             Name = "Student",
                             NormalizedName = "STUDENT"
                         },
                         new
                         {
-                            Id = "4ec096d4-b7a1-4366-bbe0-d53c6164c026",
+                            Id = "fbff0c42-d7cb-4a33-9475-a86040ecbc9b",
                             Name = "Company",
                             NormalizedName = "COMPANY"
                         });
@@ -157,8 +160,8 @@ namespace TIKNA.Migrations
                     b.HasData(
                         new
                         {
-                            UserId = "b91f467f-0059-4b0b-9e7f-26441fef1696",
-                            RoleId = "bd9cfbf2-37a3-4ea4-9ccc-9d46a7fb9b7d"
+                            UserId = "5c29a469-f6ad-46f2-94e8-555677cc27b1",
+                            RoleId = "a1dfd8b0-d218-48bc-b871-0c31bf16ec89"
                         });
                 });
 
@@ -279,20 +282,20 @@ namespace TIKNA.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "b91f467f-0059-4b0b-9e7f-26441fef1696",
+                            Id = "5c29a469-f6ad-46f2-94e8-555677cc27b1",
                             AccessFailedCount = 0,
                             Address = "Main Admin Office",
                             ApprovalStatus = "Approved",
-                            ConcurrencyStamp = "f59d246e-7d2d-432f-96ef-6f29dcd47659",
+                            ConcurrencyStamp = "1d1c49f6-8f26-48aa-887b-68497f4b3234",
                             Email = "admin@tikna.com",
                             EmailConfirmed = true,
                             LockoutEnabled = false,
                             Name = "System Admin",
                             NormalizedEmail = "ADMIN@TIKNA.COM",
                             NormalizedUserName = "ADMIN@TIKNA.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBpzY4LQeY1zEVqfMUTIKcjyxeHMLUxT/1pe1HZ07KgrrPRa37vw7rMW6nS9jOC/nQ==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEKzmjo7eP9TGdhM/bXCfrqqdHELoG0jbO8mgn299JPFWKBGU1gy7ceZpUx+qbnVZ1A==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "a0a6cee9-6661-4aa2-a0a0-eb6c79595542",
+                            SecurityStamp = "37948cd5-7078-488b-814f-437f1dbac941",
                             TwoFactorEnabled = false,
                             UserName = "admin@tikna.com",
                             UserType = "Admin"
@@ -488,10 +491,6 @@ namespace TIKNA.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductId"));
 
-                    b.Property<string>("ApplicationUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("Brand")
                         .HasColumnType("nvarchar(max)");
 
@@ -512,6 +511,10 @@ namespace TIKNA.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -521,7 +524,7 @@ namespace TIKNA.Migrations
 
                     b.HasKey("ProductId");
 
-                    b.HasIndex("ApplicationUserId");
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("Products");
                 });
@@ -716,7 +719,7 @@ namespace TIKNA.Migrations
                 {
                     b.HasOne("TIKNA.Models.ApplicationUser", "Owner")
                         .WithMany("Products")
-                        .HasForeignKey("ApplicationUserId")
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

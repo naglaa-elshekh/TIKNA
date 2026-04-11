@@ -1,146 +1,170 @@
-﻿//using Microsoft.AspNetCore.Identity;
-//using Microsoft.AspNetCore.Mvc;
-//using Microsoft.IdentityModel.Tokens;
-//using System.IdentityModel.Tokens.Jwt;
-//using System.Security.Claims;
-//using System.Text;
-//using TIKNA.Models;
-//using Microsoft.EntityFrameworkCore;
-//using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using TIKNA.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
-//namespace TIKNA.Controllers
-//{
-//    [Route("api/[controller]")]
-//    [ApiController]
-//    public class AccountController : ControllerBase
-//    {
-//        private readonly UserManager<ApplicationUser> _userManager;
-//        private readonly RoleManager<IdentityRole> _roleManager;
-//        private readonly IConfiguration _configuration;
-//        private readonly ApplicationDbContext _context;
+namespace TIKNA.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class AccountController : ControllerBase
+    {
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly IConfiguration _configuration;
 
-//        public AccountController(
-//            UserManager<ApplicationUser> userManager,
-//            RoleManager<IdentityRole> roleManager,
-//            IConfiguration configuration,
-//            ApplicationDbContext context)
-//        {
-//            _userManager = userManager;
-//            _roleManager = roleManager;
-//            _configuration = configuration;
-//            _context = context;
-//        }
+        public AccountController(
+            UserManager<ApplicationUser> userManager,
+            RoleManager<IdentityRole> roleManager,
+            IConfiguration configuration)
+        {
+            _userManager = userManager;
+            _roleManager = roleManager;
+            _configuration = configuration;
+        }
 
-//        // 1. تسجيل مستخدم جديد (طالب أو شركة)
-//        [HttpPost("Register")]
-//        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
-//        {
-//            var userExists = await _userManager.FindByEmailAsync(dto.Email);
-//            if (userExists != null) return BadRequest("الإيميل مسجل بالفعل.");
+        // 1. تسجيل مستخدم جديد
+        [HttpPost("Register")]
+        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
+        {
+            // 1. التأكد من عدم وجود المستخدم
+            var userExists = await _userManager.FindByEmailAsync(dto.Email);
+            if (userExists != null) return BadRequest("الإيميل مسجل بالفعل.");
 
-//            var user = new ApplicationUser
-//            {
-//                UserName = dto.Email,
-//                Email = dto.Email,
-//                UserType = dto.UserType,
-//                // لو شركة تبدأ بـ Pending، لو فرد Approved علطول
-//                ApprovalStatus = (dto.UserType == "Company") ? "Pending" : "Approved"
-//            };
+            // 2. إنشاء اليوزر
+            var user = new ApplicationUser
+            {
+                UserName = dto.Email,
+                Email = dto.Email,
+                Name = dto.Name,
+                UserType = dto.UserType,
+                Address = dto.Address ?? "Not Specified",
+                University = dto.University,
+                Faculty = dto.Faculty,
+                Bio = dto.CompanyDescription,
+                CompanyServiceType = dto.ServiceType,
+                CommercialRegister = dto.CompanyRegisterNumber,
+                PhoneNumber = dto.Phone,
+                ApprovalStatus = (dto.UserType.ToLower() == "company") ? "Pending" : "Approved",
+            };
 
-//            var result = await _userManager.CreateAsync(user, dto.Password);
-//            if (!result.Succeeded) return BadRequest(result.Errors);
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded) return BadRequest(result.Errors);
 
-//            await _userManager.AddToRoleAsync(user, dto.UserType);
+            // 3. إضافة الـ Role
+            // ... الكود القديم بتاع إضافة الـ Role ...
+            await _userManager.AddToRoleAsync(user, dto.UserType);
 
-//            // حفظ الاسم الكامل والبيانات في جدول الـ Customer
-//            var customer = new Customer
-//            {
-//                ApplicationUserId = user.Id,
-//                Name = dto.Name,
-//                Address = "Not Specified",
-//                Phone = "0000000000"
-//            };
+            // توليد التوكن فوراً عشان يعمل Auto-Login
+            var token = await GenerateJwtToken(user);
 
-//            _context.Customers.Add(customer);
-//            await _context.SaveChangesAsync();
+            return Ok(new
+            {
+                message = user.UserType.ToLower() == "company"
+? "أهلاً بك في لTIKNA! تم إنشاء حسابك ويمكنك تصفح لوحة التحكم، مع العلم أن تفعيل ميزات البيع والصيانة يتطلب موافقة الإدارة." :
+"تم التسجيل والدخول بنجاح.",
+                token = token,           // التوكن اللي هيخلي اليوزر يدخل علطول
+                userType = user.UserType,
+                fullName = user.Name,
+                status = user.ApprovalStatus // هيرجع Pending للشركة و Approved للطالب
+            });
+        }
+        // 2. تسجيل الدخول
+        [HttpPost("Login")]
+        public async Task<IActionResult> Login([FromBody] LoginDto dto)
+        {
+            var user = await _userManager.FindByEmailAsync(dto.Email);
 
-//            var token = await GenerateJwtToken(user);
-//            return Ok(new { token, message = "تم التسجيل بنجاح" });
-//        }
+            if (user != null && await _userManager.CheckPasswordAsync(user, dto.Password))
+            {
 
-//        // 2. تسجيل الدخول
-//        [HttpPost("Login")]
-//        public async Task<IActionResult> Login([FromBody] LoginDto dto)
-//        {
-//            var user = await _userManager.FindByEmailAsync(dto.Email);
-//            if (user != null && await _userManager.CheckPasswordAsync(user, dto.Password))
-//            {
-//                var token = await GenerateJwtToken(user);
-//                return Ok(new
-//                {
-//                    token,
-//                    userType = user.UserType,
-//                    status = user.ApprovalStatus
-//                });
-//            }
-//            return Unauthorized("بيانات الدخول غير صحيحة.");
-//        }
+                if (user.ApprovalStatus == "Rejected")
+                    return BadRequest("تم رفض هذا الحساب.");
 
-//        // 3. عرض الشركات التي تنتظر الموافقة (للأدمن فقط)
-//        [Authorize(Roles = "Admin")]
-//        [HttpGet("GetPendingCompanies")]
-//        public async Task<IActionResult> GetPendingCompanies()
-//        {
-//            var pendingUsers = await _userManager.Users
-//                .Where(u => u.UserType == "Company" && u.ApprovalStatus == "Pending")
-//                .ToListAsync();
+                var token = await GenerateJwtToken(user);
+                return Ok(new
+                {
+                    token,
+                    userType = user.UserType,
+                    status = user.ApprovalStatus,
+                    fullName = user.Name
+                });
+            }
+            return Unauthorized("بيانات الدخول غير صحيحة.");
+        }
 
-//            return Ok(pendingUsers);
-//        }
+        // 3. عرض الشركات المنتظرة (للأدمن)
+        [Authorize(Roles = "Admin")]
+        [HttpGet("GetPendingCompanies")]
+        public async Task<IActionResult> GetPendingCompanies()
+        {
+            var pending = await _userManager.Users
+                .Where(u => u.UserType == "Company" && u.ApprovalStatus == "Pending")
+                .ToListAsync();
+            return Ok(pending);
+        }
 
-//        // 4. الموافقة أو الرفض (للأدمن فقط)
-//        [Authorize(Roles = "Admin")]
-//        [HttpPut("ApproveOrRejectCompany")]
-//        public async Task<IActionResult> ApproveOrRejectCompany(string userId, string status)
-//        {
-//            // status لازم تكون "Approved" أو "Rejected"
-//            var user = await _userManager.FindByIdAsync(userId);
-//            if (user == null) return NotFound("المستخدم غير موجود");
+        // 4. موافقة أو رفض (للأدمن)
 
-//            user.ApprovalStatus = status;
-//            var result = await _userManager.UpdateAsync(user);
+        [Authorize(Roles = "Admin")]
+        [HttpPut("ApproveOrReject")]
+        public async Task<IActionResult> ApproveOrReject(string userId, string status)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound("المستخدم غير موجود");
 
-//            if (result.Succeeded)
-//                return Ok(new { message = $"تم تحديث حالة الشركة إلى {status}" });
+            user.ApprovalStatus = status;
+            var result = await _userManager.UpdateAsync(user);
 
-//            return BadRequest(result.Errors);
-//        }
+            if (result.Succeeded && status == "Approved")
+            {
+                // نبعت الإيميل هنا
+                await SendApprovalEmail(user.Email, user.Name);
+            }
 
-//        // 5. ميثود مساعدة لتوليد التوكن
-//        private async Task<string> GenerateJwtToken(ApplicationUser user)
-//        {
-//            var authClaims = new List<Claim>
-//            {
-//                new Claim(ClaimTypes.Name, user.UserName),
-//                new Claim(ClaimTypes.NameIdentifier, user.Id),
-//                new Claim("UserStatus", user.ApprovalStatus?? "Pending"),
-//                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-//            };
+            return Ok(new { message = $"تم تحديث الحالة إلى {status} وإرسال إشعار للمستخدم." });
+        }
+        private async Task SendApprovalEmail(string userEmail, string userName)
+        {
+            // هنا بنستخدم مكتبة مثل MailKit أو SmtpClient
+            // للمثال، ده كود توضيحي للمحتوى:
+            var subject = "تم قبول حسابك في منصة TIKNA";
+            var body = $"أهلاً {userName}، نود إعلامك بأن الإدارة قد وافقت على طلب انضمامك. يمكنك الآن البدء في رفع منتجاتك واستلام طلبات الصيانة.";
 
-//            var userRoles = await _userManager.GetRolesAsync(user);
-//            foreach (var role in userRoles) authClaims.Add(new Claim(ClaimTypes.Role, role));
+            // كود إرسال الإيميل الفعلي (بيحتاج إعدادات SMTP لـ Gmail أو Outlook)
+            // await _emailService.SendEmailAsync(userEmail, subject, body);
+        }
+        private async Task<string> GenerateJwtToken(ApplicationUser user)
+        {
+            var authClaims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim("UserType", user.UserType),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            };
 
-//            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
+            var userRoles = await _userManager.GetRolesAsync(user);
+            foreach (var role in userRoles)
+                authClaims.Add(new Claim(ClaimTypes.Role, role));
 
-//            var token = new JwtSecurityToken(
-//                issuer: _configuration["JWT:ValidIssuer"],
-//                audience: _configuration["JWT:ValidAudience"],
-//                expires: DateTime.Now.AddHours(3),
-//                claims: authClaims,
-//                signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
-//            );
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
 
-//            return new JwtSecurityTokenHandler().WriteToken(token);
-//        }
-//    }
-//}
+            var token = new JwtSecurityToken(
+    issuer: _configuration["JWT:ValidIssuer"],      
+    audience: _configuration["JWT:ValidAudience"],  
+    expires: DateTime.Now.AddHours(12),
+    claims: authClaims,
+    signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+    }
+
+}

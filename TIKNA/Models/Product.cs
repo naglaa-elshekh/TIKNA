@@ -31,10 +31,10 @@ namespace TIKNA.Models
         // --- التعديل الجوهري هنا ---
         // الربط مباشرة مع الـ ApplicationUser (صاحب المنتج)
         [Required]
-        public string OwnerId { get; set; }
+        public string ApplicationUserId { get; set; }
 
-        [ForeignKey("OwnerId")]
-        public ApplicationUser Owner { get; set; }
+        [ForeignKey("ApplicationUserId")]
+        public virtual ApplicationUser Owner { get; set; }
 
         // العلاقات التانية (لو لسه محتاجاهم)
         public ICollection<OrderProd>? OrderProducts { get; set; }
