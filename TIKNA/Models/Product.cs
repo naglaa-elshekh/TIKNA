@@ -1,24 +1,45 @@
-﻿using TIKNA.Models;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-public class Product
+namespace TIKNA.Models
 {
-    public int ProductId { get; set; }
-    public string Name { get; set; }
-    public string Description { get; set; } // هنا بنجمع المواصفات الفنية
-    public decimal Price { get; set; }
-    public string? ImageUrl { get; set; }
-    public int Quantity { get; set; }
+    public class Product
+    {
+        [Key]
+        public int ProductId { get; set; }
 
-    // الخانات اللي ناقصاكي عشان الـ UI (الصورة)
-    public string? Brand { get; set; }
-    public string? Category { get; set; } // نوع اللاب (Gaming, Student...)
-    public bool IsActive { get; set; } = true;
+        [Required]
+        public string Name { get; set; }
 
-    // الربط مع صاحب المنتج (سواء كان طالب أو شركة)
-    public int CustomerId { get; set; }
-    public Customer Owner { get; set; }
+        public string Description { get; set; } // المواصفات الفنية
 
-    public ICollection<OrderProd> OrderProducts { get; set; }
-    public ICollection<Rental> Rentals { get; set; }
-    public ICollection<MaintenanceRequest> MaintenanceRequests { get; set; }
+        [Required]
+        [Range(0, 1000000)]
+        public decimal Price { get; set; }
+
+        public string? ImageUrl { get; set; }
+
+        public int Quantity { get; set; }
+
+        public string? Brand { get; set; }
+
+        public string? Category { get; set; } // (Gaming, Student, Business...)
+
+        public bool IsActive { get; set; } = true;
+
+        // --- التعديل الجوهري هنا ---
+        // الربط مباشرة مع الـ ApplicationUser (صاحب المنتج)
+        [Required]
+        public string OwnerId { get; set; }
+
+        [ForeignKey("OwnerId")]
+        public ApplicationUser Owner { get; set; }
+
+        // العلاقات التانية (لو لسه محتاجاهم)
+        public ICollection<OrderProd>? OrderProducts { get; set; }
+        public ICollection<Rental>? Rentals { get; set; }
+        public ICollection<MaintenanceRequest>? maintenanceRequests { get; set; }
+
+    }
 }

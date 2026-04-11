@@ -1,102 +1,94 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿//using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+//using Microsoft.EntityFrameworkCore;
+//using TIKNA.Models;
 
-[Route("api/[controller]")]
-[ApiController]
-public class CartController : ControllerBase
-{
-    private readonly ApplicationDbContext _context;
-    public CartController(ApplicationDbContext context) => _context = context;
+//namespace TIKNA.Data
+//{
+//    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+//    {
+//        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+//            : base(options)
+//        {
+//        }
 
-    // 1. إضافة منتج للسلة (أو زيادة الكمية لو موجود)
-    [HttpPost("add")]
-    public async Task<IActionResult> AddToCart(AddToCartDTO dto)
-    {
-        var cart = await _context.Carts.Include(c => c.CartItems)
-            .FirstOrDefaultAsync(c => c.CustomerId == dto.CustomerId);
+//        // تسجيل الجداول في الداتابيز
+//        public DbSet<Product> Products { get; set; }
+//        public DbSet<Order> Orders { get; set; }
+//        public DbSet<OrderProd> OrderProducts { get; set; }
+//        public DbSet<Rental> Rentals { get; set; }
+//        public DbSet<MaintenanceRequest> MaintenanceRequests { get; set; }
+//        public DbSet<Payment> Payments { get; set; }
+//        public DbSet<Cart> Carts { get; set; }
+//        public DbSet<CartItem> CartItems { get; set; }
 
-        if (cart == null)
-        {
-            cart = new Cart { CustomerId = dto.CustomerId };
-            _context.Carts.Add(cart);
-            await _context.SaveChangesAsync();
-        }
+//        protected override void OnModelCreating(ModelBuilder builder)
+//        {
+//            // ضروري جداً لتشغيل جداول الـ Identity (Users, Roles)
+//            base.OnModelCreating(builder);
 
-        var existingItem = cart.CartItems.FirstOrDefault(ci => ci.ProductId == dto.ProductId);
-        if (existingItem != null)
-        {
-            existingItem.Quantity += dto.Quantity;
-        }
-        else
-        {
-            _context.CartItems.Add(new CartItem { CartId = cart.Id, ProductId = dto.ProductId, Quantity = dto.Quantity });
-        }
+//            // 1. إعداد الـ Primary Key لجدول الوسيط OrderProd (Many-to-Many)
+//            builder.Entity<OrderProd>()
+//                .HasKey(op => new { op.OrderId, op.ProductId });
 
-        await _context.SaveChangesAsync();
-        return Ok(new { message = "تمت الإضافة" });
-    }
+//            // 2. علاقة المنتج بصاحبه (ApplicationUser)
+//            builder.Entity<Product>()
+//                .HasOne(p => p.Owner)
+//                .WithMany(u => u.Products)
+//                .HasForeignKey(p => p.OwnerId)
+//                .OnDelete(DeleteBehavior.Cascade);
 
-    // 2. عرض محتويات السلة لعميل معين
-    [HttpGet("{customerId}")]
-    public async Task<ActionResult<IEnumerable<CartItemReadDTO>>> GetCart(int customerId)
-    {
-        var items = await _context.CartItems
-            .Where(ci => ci.Cart.CustomerId == customerId)
-            .Select(ci => new CartItemReadDTO
-            {
-                ProductId = ci.ProductId,
-                ProductName = ci.Product.Name,
-                Price = ci.Product.Price,
-                ImageUrl = ci.Product.ImageUrl,
-                Quantity = ci.Quantity
-            }).ToListAsync();
+//            // 3. علاقة الطلب بالمشتري (ApplicationUser)
+//            builder.Entity<Order>()
+//                .HasOne(o => o.Buyer)
+//                .WithMany() // المستخدم ممكن يكون له طلبات كتير
+//                .HasForeignKey(o => o.BuyerId)
+//                .OnDelete(DeleteBehavior.Restrict);
 
-        return Ok(items);
-    }
+//            // 4. علاقة السلة بالمستخدم (One-to-One)
+//            builder.Entity<Cart>()
+//                .HasOne(c => c.User)
+//                .WithOne()
+//                .HasForeignKey<Cart>(c => c.UserId)
+//                .OnDelete(DeleteBehavior.Cascade);
 
-    // 3. تعديل الكمية (مثلاً من علامة + و - في الفرونت إند)
-    [HttpPut("update-quantity")]
-    public async Task<IActionResult> UpdateQuantity(UpdateQuantityDTO dto)
-    {
-        var item = await _context.CartItems
-            .FirstOrDefaultAsync(ci => ci.Cart.CustomerId == dto.CustomerId && ci.ProductId == dto.ProductId);
+//            // 5. علاقة الدفع (Payment) بالعمليات المختلفة
+//            // استخدام Restrict لمنع تعارض الـ Cascade Paths في SQL Server
+//            builder.Entity<Payment>()
+//                .HasOne(p => p.Order)
+//                .WithOne()
+//                .HasForeignKey<Payment>(p => p.OrderId)
+//                .OnDelete(DeleteBehavior.Restrict);
 
-        if (item == null) return NotFound("المنتج غير موجود في السلة");
+//            builder.Entity<Payment>()
+//                .HasOne(p => p.Rental)
+//                .WithOne()
+//                .HasForeignKey<Payment>(p => p.RentalId)
+//                .OnDelete(DeleteBehavior.Restrict);
 
-        if (dto.NewQuantity <= 0)
-        {
-            _context.CartItems.Remove(item); // لو نزل للصفر نمسحه خالص
-        }
-        else
-        {
-            item.Quantity = dto.NewQuantity;
-        }
+//            builder.Entity<Payment>()
+//                .HasOne(p => p.MaintenanceRequest)
+//                .WithOne()
+//                .HasForeignKey<Payment>(p => p.MaintenanceRequestId)
+//                .OnDelete(DeleteBehavior.Restrict);
 
-        await _context.SaveChangesAsync();
-        return Ok(new { message = "تم تحديث الكمية" });
-    }
+//            // 6. علاقات المنتج (Product) مع الإيجار والصيانة
+//            builder.Entity<MaintenanceRequest>()
+//                .HasOne(m => m.Product)
+//                .WithMany(p => p.MaintenanceRequests)
+//                .HasForeignKey(m => m.ProductId)
+//                .OnDelete(DeleteBehavior.Restrict);
 
-    // 4. حذف منتج واحد من السلة
-    [HttpDelete("remove/{customerId}/{productId}")]
-    public async Task<IActionResult> RemoveItem(int customerId, int productId)
-    {
-        var item = await _context.CartItems
-            .FirstOrDefaultAsync(ci => ci.Cart.CustomerId == customerId && ci.ProductId == productId);
+//            builder.Entity<Rental>()
+//                .HasOne(r => r.Product)
+//                .WithMany(p => p.Rentals)
+//                .HasForeignKey(r => r.ProductId)
+//                .OnDelete(DeleteBehavior.Restrict);
 
-        if (item == null) return NotFound();
-
-        _context.CartItems.Remove(item);
-        await _context.SaveChangesAsync();
-        return Ok(new { message = "تم الحذف" });
-    }
-
-    // 5. مسح السلة بالكامل (Clear Cart)
-    [HttpDelete("clear/{customerId}")]
-    public async Task<IActionResult> ClearCart(int customerId)
-    {
-        var items = await _context.CartItems.Where(ci => ci.Cart.CustomerId == customerId).ToListAsync();
-        _context.CartItems.RemoveRange(items);
-        await _context.SaveChangesAsync();
-        return Ok(new { message = "تم تفريغ السلة" });
-    }
-}
+//            // 7. ضبط دقة الأرقام المالية (Decimal Precision)
+//            builder.Entity<Product>().Property(p => p.Price).HasPrecision(18, 2);
+//            builder.Entity<Order>().Property(o => o.TotalPrice).HasPrecision(18, 2);
+//            builder.Entity<OrderProd>().Property(op => op.UnitPrice).HasPrecision(18, 2);
+//            builder.Entity<Payment>().Property(p => p.Amount).HasPrecision(18, 2);
+//        }
+//    }
+//}

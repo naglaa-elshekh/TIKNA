@@ -1,17 +1,33 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using TIKNA.Models;
+using System.ComponentModel.DataAnnotations;
 
-public class ApplicationUser : IdentityUser
+namespace TIKNA.Models
 {
-    // الاسم الكامل متاح للأدمن والطالب
-    public string? FullName { get; set; }
+    public class ApplicationUser : IdentityUser
+    {
+        // تم التوحيد لتشمل اسم الفرد أو اسم الكيان (الشركة/المركز)
+        [Required]
+        public string Name { get; set; }
 
-    public string UserType { get; set; } = "Individual";
+        [Required]
+        public string UserType { get; set; } // (Student, Company, Admin)
 
-    // حالة القبول: الشركات بتبدأ بـ false والأدمن يخليها true
-    public string? ApprovalStatus { get; set; } = "Pending";
+        [Required]
+        public string Address { get; set; }
 
+        // بيانات الطالب (تكون Null لو المستخدم شركة)
+        public string? University { get; set; }
+        public string? Faculty { get; set; }
 
-    // الربط مع جدول العميل (للطالب فقط)
-    public Customer? Customer { get; set; }
+        // بيانات الشركة (تكون Null لو المستخدم فرد)
+        public string? CommercialRegister { get; set; }
+        public string? Bio { get; set; }
+        public string? CompanyServiceType { get; set; }
+
+        // حالة القبول (Default: Approved للطالب، ويتم تغييرها لـ Pending في الـ Register لو شركة)
+        public string ApprovalStatus { get; set; } = "Approved";
+
+        public ICollection<Product>? Products { get; set; }
+        public ICollection<MaintenanceRequest>? MaintenanceRequests { get; set; }
+    }
 }

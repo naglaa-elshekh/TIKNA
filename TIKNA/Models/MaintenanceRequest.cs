@@ -1,26 +1,41 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TIKNA.Models
 {
     public class MaintenanceRequest
     {
+        [Key]
         public int MaintenanceRequestId { get; set; }
 
-        // المنتج الذي يحتاج صيانة
+        // --- 1. المنتج (الجهاز) اللي محتاج صيانة ---
+        [Required]
         public int ProductId { get; set; }
-        public Product Product { get; set; }
 
-        // العميل الذي طلب الصيانة
-        public int CustomerId { get; set; }
-        public Customer Customer { get; set; }
+        [ForeignKey("ProductId")]
+        public virtual Product Product { get; set; }
 
-        // وصف المشكلة
+        // --- 2. المستخدم (طالب الصيانة) ---
+        // غيرناه لـ string عشان يربط مع الـ ApplicationUser
+        [Required]
+        public string UserId { get; set; }
+
+        [ForeignKey("UserId")]
+        public virtual ApplicationUser User { get; set; }
+
+        // --- 3. تفاصيل الطلب ---
+        [Required(ErrorMessage = "برجاء وصف المشكلة بالتفصيل")]
         public string IssueDescription { get; set; }
 
-        public DateTime RequestDate { get; set; }
+        [Required]
+        public DateTime RequestDate { get; set; } = DateTime.Now;
 
-        // Payment for maintenance
-        public Payment Payment { get; set; }
+        // حالة الطلب (مثلاً: Pending, InProgress, Completed, Cancelled)
+        public string Status { get; set; } = "Pending";
+
+        // الربط مع الدفع (اختياري حالياً)
+        // public int? PaymentId { get; set; }
+        // public virtual Payment? Payment { get; set; }
     }
 }
-

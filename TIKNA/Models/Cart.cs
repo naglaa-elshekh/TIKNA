@@ -1,24 +1,43 @@
-﻿using TIKNA.Models;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-public class Cart
+namespace TIKNA.Models
 {
-    public int Id { get; set; }
-    public int CustomerId { get; set; }
-    public Customer Customer { get; set; }
+    public class Cart
+    {
+        [Key]
+        public int Id { get; set; }
 
-    // الـ Collection اللي الـ WithMany بيشاور عليها
-    public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
-}
+        // الربط مع المستخدم (المشتري) مباشرة
+        [Required]
+        public string UserId { get; set; }
 
-public class CartItem
-{
-    public int Id { get; set; }
+        [ForeignKey("UserId")]
+        public virtual ApplicationUser User { get; set; }
 
-    public int CartId { get; set; }
-    public Cart Cart { get; set; } // الـ Navigation Property للسلة
+        // قائمة العناصر الموجودة في السلة
+        public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+    }
 
-    public int ProductId { get; set; }
-    public Product Product { get; set; } // الـ Navigation Property للمنتج
+    public class CartItem
+    {
+        [Key]
+        public int Id { get; set; }
 
-    public int Quantity { get; set; } = 1;
+        [Required]
+        public int CartId { get; set; }
+
+        [ForeignKey("CartId")]
+        public virtual Cart Cart { get; set; }
+
+        [Required]
+        public int ProductId { get; set; }
+
+        [ForeignKey("ProductId")]
+        public virtual Product Product { get; set; }
+
+        [Range(1, 100, ErrorMessage = "الكمية يجب أن تكون بين 1 و 100")]
+        public int Quantity { get; set; } = 1;
+    }
 }
