@@ -16,6 +16,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Cart> Carts { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
 
+    public DbSet<RentalRequest> RentalRequests { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -53,17 +55,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Payment>()
             .HasOne(p => p.Order).WithOne().HasForeignKey<Payment>(p => p.OrderId).OnDelete(DeleteBehavior.NoAction);
 
-        builder.Entity<MaintenanceRequest>()
-            .HasOne(m => m.Product).WithMany(p => p.maintenanceRequests).HasForeignKey(m => m.ProductId).OnDelete(DeleteBehavior.NoAction);
+        // 4. العلاقات (تم تهميشها لتجنب التعارض)
+        // builder.Entity<MaintenanceRequest>().HasOne(m => m.Product).WithMany(p => p.maintenanceRequests).HasForeignKey(m => m.ProductId);
+        // builder.Entity<RentalRequest>().HasOne(r => r.Product).WithMany(p => p.Rentals).HasForeignKey(r => r.ProductId);
 
-        builder.Entity<Rental>()
-            .HasOne(r => r.Product).WithMany(p => p.Rentals).HasForeignKey(r => r.ProductId).OnDelete(DeleteBehavior.NoAction);
-
-        // 5. ضبط الدقة المالية
+        // 5. ضبط الدقة المالية (ده سيبيه زي ما هو)
         builder.Entity<Product>().Property(p => p.Price).HasPrecision(18, 2);
         builder.Entity<Order>().Property(p => p.TotalPrice).HasPrecision(18, 2);
         builder.Entity<OrderProd>().Property(op => op.UnitPrice).HasPrecision(18, 2);
         builder.Entity<Payment>().Property(p => p.Amount).HasPrecision(18, 2);
+       
     
    
 

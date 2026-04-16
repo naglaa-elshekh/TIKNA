@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TIKNA.Models
@@ -7,35 +6,30 @@ namespace TIKNA.Models
     public class MaintenanceRequest
     {
         [Key]
-        public int MaintenanceRequestId { get; set; }
+        public int Id { get; set; }
 
-        // --- 1. المنتج (الجهاز) اللي محتاج صيانة ---
-        [Required]
-        public int ProductId { get; set; }
-
-        [ForeignKey("ProductId")]
-        public virtual Product Product { get; set; }
-
-        // --- 2. المستخدم (طالب الصيانة) ---
-        // غيرناه لـ string عشان يربط مع الـ ApplicationUser
         [Required]
         public string UserId { get; set; }
 
         [ForeignKey("UserId")]
-        public virtual ApplicationUser User { get; set; }
-
-        // --- 3. تفاصيل الطلب ---
-        [Required(ErrorMessage = "برجاء وصف المشكلة بالتفصيل")]
-        public string IssueDescription { get; set; }
+        public ApplicationUser User { get; set; } // ربط الطلب باليوزر
 
         [Required]
+        public string DeviceType { get; set; } // لاب توب، تابلت.. إلخ
+
+        [Required]
+        public string ModelName { get; set; }
+
+        public string ProblemDescription { get; set; }
+        public string? ImagePath { get; set; }
+
+        public string OrderNumber { get; set; } // TIKNA-M-XXXX
+
+        public MaintenanceStatus Status { get; set; } = MaintenanceStatus.Pending;
+
         public DateTime RequestDate { get; set; } = DateTime.Now;
-
-        // حالة الطلب (مثلاً: Pending, InProgress, Completed, Cancelled)
-        public string Status { get; set; } = "Pending";
-
-        // الربط مع الدفع (اختياري حالياً)
-        // public int? PaymentId { get; set; }
-        // public virtual Payment? Payment { get; set; }
+        public DateTime? ExpectedDeliveryDate { get; set; }
+        public string? AdminComment { get; set; }
+        public decimal EstimatedCost { get; set; }
     }
 }
