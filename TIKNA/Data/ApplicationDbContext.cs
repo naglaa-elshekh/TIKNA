@@ -22,8 +22,52 @@ using Microsoft.EntityFrameworkCore;using TIKNA.Models;public class ApplicationD
     {
         base.OnModelCreating(builder);
 
+<<<<<<< Updated upstream
         // 1. علاقة الـ OrderProd (Many-to-Many)
         builder.Entity<OrderProd>().HasKey(op => new { op.OrderId, op.ProductId });
+=======
+//      
+        builder.Entity<OrderProd>()
+    .HasKey(op => new { op.OrderId, op.ProductId });
+
+
+
+        builder.Entity<OrderProd>()
+        .HasOne(op => op.Order)
+        .WithMany(o => o.OrderProducts)
+        .HasForeignKey(op => op.OrderId);
+
+        builder.Entity<Payment>()
+     .HasOne(p => p.Order)
+     .WithOne(o => o.Payment)
+     .HasForeignKey<Payment>(p => p.OrderId)
+     .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Payment>()
+            .HasOne(p => p.Rental)
+            .WithOne(r => r.Payment)
+            .HasForeignKey<Payment>(p => p.RentalId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Payment>()
+            .HasOne(p => p.MaintenanceRequest)
+            .WithOne(m => m.Payment)
+            .HasForeignKey<Payment>(p => p.MaintenanceRequestId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // العلاقات Product → MaintenanceRequest / Rental / OrderProducts
+        builder.Entity<MaintenanceRequest>()
+            .HasOne(m => m.Product)
+            .WithMany(p => p.MaintenanceRequests)
+            .HasForeignKey(m => m.ProductId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Rental>()
+            .HasOne(r => r.Product)
+            .WithMany(p => p.Rentals)
+            .HasForeignKey(r => r.ProductId)
+            .OnDelete(DeleteBehavior.Restrict);
+>>>>>>> Stashed changes
 
         builder.Entity<OrderProd>()
             .HasOne(op => op.Product)
