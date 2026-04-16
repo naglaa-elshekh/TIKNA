@@ -1,45 +1,56 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using TIKNA.Models;
 
-namespace TIKNA.Models
+public class Product
 {
-    public class Product
-    {
-        [Key]
-        public int ProductId { get; set; }
+    [Key]
+    public int ProductId { get; set; }
 
-        [Required]
-        public string Name { get; set; }
+    [Required]
+    public string Name { get; set; }
 
-        public string Description { get; set; } // المواصفات الفنية
+    [Required]
+    public string Brand { get; set; }
 
-        [Required]
-        [Range(0, 1000000)]
-        public decimal Price { get; set; }
+    [Required]
+    public string Model { get; set; }
 
-        public string? ImageUrl { get; set; }
+    public string? Description { get; set; }
 
-        public int Quantity { get; set; }
+    // الحقول التقنية (تأكدي من وجودها بهذه المسميات)
+    public string? CPU { get; set; }
+    public string? RAM { get; set; }
+    public string? Storage { get; set; }
+    public string? GPU { get; set; }
+    public string? ScreenSize { get; set; }
+    public string? Color { get; set; }
+    public string? Condition { get; set; }
 
-        public string? Brand { get; set; }
+    [Required]
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal Price { get; set; }
 
-        public string? Category { get; set; } // (Gaming, Student, Business...)
+    public int Quantity { get; set; } = 1;
+    public string? ImageUrl { get; set; }
+    public string? Category { get; set; }
 
-        public bool IsActive { get; set; } = true;
+    // حالات البيع والإيجار
+    public bool ForSale { get; set; } = true;
+    public bool ForRent { get; set; } = false;
+    public decimal? RentalPricePerDay { get; set; }
 
-        // --- التعديل الجوهري هنا ---
-        // الربط مباشرة مع الـ ApplicationUser (صاحب المنتج)
-        [Required]
-        public string ApplicationUserId { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        [ForeignKey("ApplicationUserId")]
-        public virtual ApplicationUser Owner { get; set; }
+    [Required]
+    public string ApplicationUserId { get; set; }
+    [ForeignKey("ApplicationUserId")]
+    public virtual ApplicationUser Owner { get; set; }
 
-        // العلاقات التانية (لو لسه محتاجاهم)
-        public ICollection<OrderProd>? OrderProducts { get; set; }
-        public ICollection<Rental>? Rentals { get; set; }
-        public ICollection<MaintenanceRequest>? maintenanceRequests { get; set; }
+    public virtual ICollection<OrderProd>? OrderProducts { get; set; }
+    public virtual ICollection<MaintenanceRequest>? MaintenanceRequests { get; set; }
+    public virtual ICollection<Rental>? Rentals { get; set; }
 
-    }
+
 }

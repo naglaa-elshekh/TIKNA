@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TIKNA.Models;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+ using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;using TIKNA.Models;public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
@@ -54,7 +56,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(p => p.Order).WithOne().HasForeignKey<Payment>(p => p.OrderId).OnDelete(DeleteBehavior.NoAction);
 
         builder.Entity<MaintenanceRequest>()
-            .HasOne(m => m.Product).WithMany(p => p.maintenanceRequests).HasForeignKey(m => m.ProductId).OnDelete(DeleteBehavior.NoAction);
+            .HasOne(m => m.Product).WithMany(p => p.MaintenanceRequests).HasForeignKey(m => m.ProductId).OnDelete(DeleteBehavior.NoAction);
 
         builder.Entity<Rental>()
             .HasOne(r => r.Product).WithMany(p => p.Rentals).HasForeignKey(r => r.ProductId).OnDelete(DeleteBehavior.NoAction);
@@ -64,8 +66,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Order>().Property(p => p.TotalPrice).HasPrecision(18, 2);
         builder.Entity<OrderProd>().Property(op => op.UnitPrice).HasPrecision(18, 2);
         builder.Entity<Payment>().Property(p => p.Amount).HasPrecision(18, 2);
-    
-   
+
+
 
         // 1. Seed Roles
         string adminRoleId = Guid.NewGuid().ToString();

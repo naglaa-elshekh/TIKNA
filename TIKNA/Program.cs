@@ -4,30 +4,43 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using TIKNA.Models;
+using Microsoft.IdentityModel.Logging; // „Â„… ·≈ŸÂ«—  ›«’Ì· «·Œÿ√
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ≈ŸÂ«—  ›«’Ì· «·Œÿ√ ›Ì «·‹ Console („Â„ Ãœ« ··„—Õ·… œÌ)
+IdentityModelEventSource.ShowPII = true;
+
+// 1. ≈÷«›… «·Œœ„« 
 builder.Services.AddControllers();
 
-// Swagger/OpenAPI
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddAuthorization();
-builder.Services.AddSwaggerGen(c =>
+// ≈⁄œ«œ «·‹ CORS
+builder.Services.AddCors(options =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "TIKNA API", Version = "v1" });
-
-    // ===== ≈÷«›… “— Authorize ··‹ JWT =====
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    options.AddPolicy("AllowAll", policy =>
     {
-        Description = "JWT Authorization header using the Bearer scheme. Example: 'Bearer {token}'",
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "TIKNA API", Version = "v1" });
+
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
         Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Description = "÷⁄ «· Êﬂ‰ Â‰« „»«‘—… »œÊ‰ ﬂ·„… Bearer"
     });
 
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement()
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {
             new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -43,15 +56,27 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// DbContext
+// ≈⁄œ«œ ﬁ«⁄œ… «·»Ì«‰« 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Identity
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
-// JWT Authentication
+// ≈⁄œ«œ «·‹ Identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+    options.Password.RequireDigit = false;
+    options.Password.RequiredLength = 5;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireLowercase = false;
+    options.User.RequireUniqueEmail = true;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+
+// 2. ≈⁄œ«œ «·‹ JWT „⁄ ≈÷«›… «·‹ Debugging Events
+var secretKey = "09686dfghgjkfmvnbbhu4768797784hvftyr8954hvbnncrfuirt"; // «·„› «Õ «·À«»  ·· Ã—»…
+var keyBytes = Encoding.UTF8.GetBytes(secretKey);
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -62,19 +87,47 @@ builder.Services.AddAuthentication(options =>
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
-        ValidateAudience = true, // ·Ê Œ·Ì Ì œÌ false «·„‘ﬂ·… Â  Õ· „ƒﬁ « »” «·√›÷·  Ÿ»ÿÌÂ«
+        ValidateAudience = true,
         ValidateLifetime = true,
-        ValidateIssuerSigningKey = true, // ·«“„  ﬂÊ‰ true
+        ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
         ValidAudience = builder.Configuration["JWT:ValidAudience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"])),
+        IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+        RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
+        NameClaimType = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+        ClockSkew = TimeSpan.Zero
+    };
+
+    // --- Â–« «·Ã“¡ ”Ìﬂ‘› ·ﬂˆ «·Œÿ√ ›Ì ‘«‘… «·‹ Console ---
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine("\n*****************************************");
+            Console.WriteLine("›‘· «· ÊÀÌﬁ (Auth Failed)!");
+            Console.WriteLine("«·”»» «· ﬁ‰Ì: " + context.Exception.Message);
+            if (context.Exception.InnerException != null)
+                Console.WriteLine(" ›«’Ì· ≈÷«›Ì…: " + context.Exception.InnerException.Message);
+            Console.WriteLine("*****************************************\n");
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            Console.WriteLine("\n?  „ ﬁ»Ê· «· Êﬂ‰ »‰Ã«Õ ··„” Œœ„: " + context.Principal.Identity.Name);
+            return Task.CompletedTask;
+        },
+        OnMessageReceived = context =>
+        {
+            var authHeader = context.Request.Headers["Authorization"];
+            Console.WriteLine("«· Êﬂ‰ «·„” ·„ „‰ Swagger: " + authHeader);
+            return Task.CompletedTask;
+        }
     };
 });
 
-
 var app = builder.Build();
 
-// Swagger
+// 3.  — Ì» «·‹ Middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -82,17 +135,22 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 
-// Authentication ﬁ»· Authorization
+app.UseRouting();
+
+app.UseCors("AllowAll");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// ⁄„· Seed ··‹ Roles
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var roles = new[] { "Admin", "User" };
-
+    var roles = new[] { "Admin", "Student", "Company" };
     foreach (var role in roles)
     {
         if (!await roleManager.RoleExistsAsync(role))
@@ -101,7 +159,5 @@ using (var scope = app.Services.CreateScope())
         }
     }
 }
-
-app.UseStaticFiles();
 
 app.Run();

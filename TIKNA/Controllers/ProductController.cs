@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using TIKNA.Models;
+using TIKNA.Models.Dtos;// تأكدي من مسار الـ DTOs
 using Microsoft.AspNetCore.Identity;
+
 
 namespace Tikna.Controllers
 {
@@ -20,145 +22,95 @@ namespace Tikna.Controllers
             _userManager = userManager;
         }
 
-        // 1. عرض كل المنتجات (متاح للجميع)
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<object>>> GetProducts()
-        {
-            return await _context.Products
-                .Select(p => new {
-                    p.ProductId,
-                    p.Name,
-                    p.Price,
-                    p.ImageUrl,
-                    p.Category,
-                    p.Brand,
-                    p.IsActive,
-                    ownerName = p.Owner.Name // بنجيب اسم المالك علطول
-                }).ToListAsync();
-        }
-
-        // 2. عرض تفاصيل منتج واحد
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetProductById(int id)
-        {
-            var product = await _context.Products
-                .Include(p => p.Owner)
-                .FirstOrDefaultAsync(p => p.ProductId == id);
-
-            if (product == null) return NotFound(new { message = "المنتج غير موجود" });
-
-            return Ok(new
-            {
-                productId = product.ProductId,
-                name = product.Name,
-                price = product.Price,
-                description = product.Description,
-                category = product.Category,
-                brand = product.Brand,
-                imageUrl = product.ImageUrl,
-                ownerName = product.Owner?.Name,
-                ownerEmail = product.Owner?.Email
-            });
-        }
-
-        // 3. إضافة منتج (مع شرط الـ Approval للشركات)
         [Authorize]
         [HttpPost("AddProduct")]
         public async Task<IActionResult> AddProduct([FromForm] ProductDto dto)
         {
-            // أ- الحصول على الـ User الحالي
+            // 1. الحصول على UserId من الـ Token
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var user = await _userManager.FindByIdAsync(userId);
+            if (userId == null) return Unauthorized(new { message = "يجب تسجيل الدخول أولاً" });
 
-            if (user == null) return Unauthorized();
-
-            // ب- فحص حالة الشركة (اللي اتكلمنا عليه يا لييدر)
-            if (user.UserType == "Company" && user.ApprovalStatus != "Approved")
-            {
-                return BadRequest(new { message = "عفواً، لا يمكنك إضافة منتجات قبل موافقة الإدارة على حسابك." });
-            }
-
-            // جـ- معالجة رفع الصورة
-            string fileName = "default.png";
+            // 2. معالجة رفع الصورة (إذا وجدت)
+            string fileName = "default_product.png";
             if (dto.ImageFile != null && dto.ImageFile.Length > 0)
             {
                 fileName = Guid.NewGuid().ToString() + Path.GetExtension(dto.ImageFile.FileName);
-                var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Images", fileName);
+                var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Images");
 
-                // تأكدي إن الفولدر موجود
-                if (!Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Images")))
-                    Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Images"));
+                if (!Directory.Exists(folderPath))
+                    Directory.CreateDirectory(folderPath);
 
-                using (var stream = new FileStream(path, FileMode.Create))
+                var fullPath = Path.Combine(folderPath, fileName);
+                using (var stream = new FileStream(fullPath, FileMode.Create))
                 {
                     await dto.ImageFile.CopyToAsync(stream);
                 }
             }
 
-            // د- تجميع المواصفات (Specs)
-            string formattedSpecs = $"RAM: {dto.Ram} | Storage: {dto.Storage} | Processor: {dto.Processor} | OS: {dto.OS}";
-
-            // هـ- إنشاء المنتج
+            // 3. إنشاء كائن المنتج وربط حقول الـ DTO بحقول الـ Model
             var product = new Product
             {
                 Name = dto.Name,
-                Price = dto.Price,
-                Category = dto.Category,
                 Brand = dto.Brand,
+                Model = dto.Model,
+                Price = dto.Price,
+                Quantity = dto.Quantity,
+                Category = dto.Category,
+                Condition = dto.Condition,
+                Description = dto.Description,
+
+                // ربط المواصفات التقنية بالحقول المستقلة في الداتابيز
+                CPU = dto.Processor,
+                RAM = dto.Ram,
+                Storage = dto.Storage,
+                GPU = dto.GraphicsCard,
+                ScreenSize = dto.Screen,
+                Color = dto.OS, // أو يمكنك إضافة حقل OS للموديل لو لزم الأمر
+
+                // حالات البيع والإيجار
+                ForSale = dto.ForSale,
+                ForRent = dto.ForRent,
+                RentalPricePerDay = dto.RentalPricePerDay,
+
                 ImageUrl = fileName,
-                ApplicationUserId = userId, // الربط المباشر باليوزر
-                IsActive = true
+                ApplicationUserId = userId,
+                IsActive = true,
+                CreatedAt = DateTime.Now
             };
 
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "تم إضافة المنتج بنجاح", productId = product.ProductId });
-        }
-
-        // 4. حذف المنتج (فحص الملكية بالـ UserId)
-        [Authorize]
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteProduct(int id)
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var product = await _context.Products.FindAsync(id);
-
-            if (product == null) return NotFound("المنتج غير موجود");
-
-            // فحص الملكية: هل اليوزر اللي داخل هو صاحب المنتج؟
-            if (product.ApplicationUserId != userId)
-                return Forbid();
-
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "تم حذف المنتج بنجاح" });
-        }
-
-        // 5. تعديل منتج
-        [Authorize]
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProduct(int id, [FromForm] ProductUpdateDto dto)
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var productInDb = await _context.Products.FindAsync(id);
-
-            if (productInDb == null) return NotFound("المنتج غير موجود");
-            if (productInDb.ApplicationUserId != userId) return Forbid();
-
-            productInDb.Name = dto.Name;
-            productInDb.Price = dto.Price;
-            productInDb.Brand = dto.Brand;
-            productInDb.Category = dto.Category;
-
-            if (dto.ImageFile != null)
+            // 4. الحفظ في قاعدة البيانات
+            try
             {
-                // كود تغيير الصورة هنا
+                _context.Products.Add(product);
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "تم إضافة الجهاز بنجاح", productId = product.ProductId });
             }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "حدث خطأ أثناء الحفظ", error = ex.Message });
+            }
+        }
 
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "تم التعديل بنجاح" });
+        // 5. عرض المنتجات مع جلب اسم المالك
+        [HttpGet]
+        public async Task<IActionResult> GetProducts()
+        {
+            var products = await _context.Products
+                .Include(p => p.Owner)
+                .Where(p => p.IsActive)
+                .Select(p => new {
+                    p.ProductId,
+                    p.Name,
+                    p.Brand,
+                    p.Model,
+                    p.Price,
+                    p.ImageUrl,
+                    OwnerName = p.Owner.Name,
+                    p.Category
+                })
+                .ToListAsync();
+
+            return Ok(products);
         }
     }
 }

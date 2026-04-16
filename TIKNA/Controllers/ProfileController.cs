@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using TIKNA.Models;
@@ -18,7 +19,7 @@ public class ProfileController : ControllerBase
         _context = context;
         _userManager = userManager;
     }
-
+    [Authorize(Roles = "Student")] // التعديل هنا: هيسمح فقط للطلاب بالوصول للـ API ده
     [HttpGet("GetDashboardData")]
     public async Task<IActionResult> GetDashboardData()
     {
@@ -34,6 +35,10 @@ public class ProfileController : ControllerBase
         {
             user.Name,
             user.Email,
+            user.Address,
+            user.University,
+            user.PhoneNumber ,
+
             // بنبعت أول رول موجود في القائمة للفرونت إند
             Role = roles.FirstOrDefault()
         };
