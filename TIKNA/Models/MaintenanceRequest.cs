@@ -1,7 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
- 
-
 
 namespace TIKNA.Models
 {
@@ -10,28 +7,42 @@ namespace TIKNA.Models
         [Key]
         public int Id { get; set; }
 
-        [Required]
-        public string UserId { get; set; }
-
-        [ForeignKey("UserId")]
-        public ApplicationUser User { get; set; } // ربط الطلب باليوزر
+        public string UserId { get; set; } // عشان نعرف مين الطالب اللي بعت
 
         [Required]
-        public string DeviceType { get; set; } // لاب توب، تابلت.. إلخ
+        public string OrderNumber { get; set; } // رقم الطلب (مثلاً TIKNA-M-123)
+
+        // --- بيانات الجهاز (من أول صور الفرونت) ---
+        [Required]
+        public string Brand { get; set; } // الماركة (Dell, HP, etc.)
 
         [Required]
-        public string ModelName { get; set; }
+        public string ModelName { get; set; } // اسم الموديل
 
-        public string ProblemDescription { get; set; }
-        public string? ImagePath { get; set; }
+        public string DeviceAge { get; set; } // عمر الجهاز (سنة، سنتين...)
 
-        public string OrderNumber { get; set; } // TIKNA-M-XXXX
+        // --- تفاصيل المشكلة ---
+        [Required]
+        public string ProblemType { get; set; } // نوع العطل (Hardware, Software, Screen)
 
-        public MaintenanceStatus Status { get; set; } = MaintenanceStatus.Pending;
+        [Required]
+        public string Description { get; set; } // وصف المشكلة التفصيلي
 
-        public DateTime RequestDate { get; set; } = DateTime.Now;
-        public DateTime? ExpectedDeliveryDate { get; set; }
-        public string? AdminComment { get; set; }
-        public decimal EstimatedCost { get; set; }
+        // --- خيارات الخدمة والموعد (من الصور الأخيرة) ---
+        public string ServiceType { get; set; } // (في المركز، صيانة منزلية، استلام وتوصيل)
+
+        [DataType(DataType.Date)]
+        public DateTime PreferredDate { get; set; } // التاريخ اللي اختاره الطالب
+
+        public string PreferredTimeSlot { get; set; } // الفترة (صباحاً، مساءً)
+
+        // --- الحسابات (للتكلفة التقريبية) ---
+        public decimal EstimatedPriceMin { get; set; } // السعر الأدنى المتوقع
+        public decimal EstimatedPriceMax { get; set; } // السعر الأقصى المتوقع
+
+        // --- حالة الطلب ---
+        public string Status { get; set; } = "Pending"; // الحالة الافتراضية
+
+        public DateTime CreatedAt { get; set; } = DateTime.Now; // وقت تقديم الطلب
     }
 }

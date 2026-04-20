@@ -1,133 +1,154 @@
-﻿
-//using Microsoft.AspNetCore.Authorization;
-//using Microsoft.AspNetCore.Http;
-//using Microsoft.AspNetCore.Mvc;
-//using Microsoft.EntityFrameworkCore;
-//using System.Security.Claims;
-//using TIKNA.Models;
-
-//namespace TIKNA.Controllers
-//{
-//    [Route("api/[controller]")]
-//    [ApiController]
-//    public class OrderController : ControllerBase
-//    {
-//        private readonly ApplicationDbContext _context;
-
-//        public OrderController(ApplicationDbContext context) => _context = context;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using TIKNA.Models;
 
 
+namespace TIKNA.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize] // تأمين كل الميثودز بالتوكن
+    public class OrderController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
 
-   
-//        [Authorize]
-//        // POST: api/Orders
-//        [HttpPost]
-//        public async Task<ActionResult> CreateOrder(OrderCreateDTO dto)
-//        {
-//            // 1. إنشاء الأوردر الأساسي
-//            var order = new Order
-//            {
-//                CustomerId = dto.CustomerId,
-//                OrderDate = DateTime.Now,
-//                Status = "Pending",
-//                TotalPrice = 0 // سنحسبه في الخطوة القادمة
-//            };
+        public OrderController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
 
-//            _context.Orders.Add(order);
-//            await _context.SaveChangesAsync(); // حفظنا الأوردر عشان ناخد الـ ID بتاعه
+        // 1. إنشاء أوردر جديد من السلة (Checkout)
+        [HttpPost("Checkout")]
+        public async Task<ActionResult> CreateOrder()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-//            decimal total = 0;
+            // جلب السلة بمنتجاتها
+            var cart = await _context.Carts
+                .Include(c => c.CartItems)
+                .ThenInclude(ci => ci.Product)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
 
-//            // 2. إضافة المنتجات في جدول OrderProd
-//            foreach (var pId in dto.ProductIds)
-//            {
-//                var product = await _context.Products.FindAsync(pId);
-//                if (product != null)
-//                {
-//                    var orderProd = new OrderProd
-//                    {
-//                        OrderId = order.OrderId,
-//                        ProductId = pId,
-//                        // Price = product.Price // يفضل تسجيل السعر وقت الشراء
-//                    };
-//                    _context.OrderProducts.Add(orderProd);
-//                    total += product.Price;
-//                }
-//            }
+            if (cart == null || !cart.CartItems.Any())
+                return BadRequest("عفواً، السلة فارغة لا يمكن إتمام الطلب.");
 
-//            // 3. تحديث إجمالي السعر في الأوردر
-//            order.TotalPrice = total;
-//            await _context.SaveChangesAsync();
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // حساب الإجمالي من أسعار المنتجات الحالية
+                decimal total = cart.CartItems.Sum(item => item.Product.Price * item.Quantity);
 
-//            return Ok(new { message = "تم تسجيل الطلب بنجاح", orderId = order.OrderId });
-//        }
-//        [HttpGet("{id}")]
-//        public async Task<ActionResult> GetOrder(int id)
-//        {
-//            var order = await _context.Orders
-//                .Include(o => o.OrderProducts) // ادخل لجدول الربط
-//                    .ThenInclude(op => op.Product) // ومنه هات بيانات المنتج
-//                .FirstOrDefaultAsync(o => o.OrderId== id);
+                // إنشاء سجل الأوردر
+                var order = new Order
+                {
+                    BuyerId = userId,
+                    OrderDate = DateTime.Now,
+                    Status = "Pending",
+                    TotalPrice = total
+                };
 
-//            if (order == null) return NotFound();
+                _context.Orders.Add(order);
+                await _context.SaveChangesAsync();
 
-//            return Ok(order);
-//        }
+                // نقل المنتجات لجدول الربط (OrderProd)
+                foreach (var item in cart.CartItems)
+                {
+                    var orderProd = new OrderProd
+                    {
+                        OrderId = order.OrderId,
+                        ProductId = item.ProductId,
+                        // Quantity = item.Quantity // ضيفيها لو الجدول عندك بيدعم كمية لكل منتج
+                    };
+                    _context.OrderProducts.Add(orderProd);
+                }
 
-//        [HttpGet]
-//        public async Task<ActionResult<IEnumerable<OrderReadDTO>>> GetAllOrders()
-//        {
-//            var orders = await _context.Orders
-//                .Include(o => o.Customer)
-//                .Include(o => o.OrderProducts)
-//                    .ThenInclude(op => op.Product)
-//                .Select(o => new OrderReadDTO
-//                {
-//                    OrderId = o.OrderId,
-//                    CustomerName = o.Customer.Name,
-//                    OrderDate = o.OrderDate,
-//                    TotalPrice = o.TotalPrice,
-//                    Status = o.Status,
-//                    Products = o.OrderProducts.Select(op => new ProductSummaryDTO
-//                    {
-//                        Name = op.Product.Name,
-//                        Price = op.Product.Price,
-//                        ImageUrl = op.Product.ImageUrl
-//                    }).ToList()
-//                }).ToListAsync();
+                // تصفير السلة بعد نجاح العملية
+                _context.CartItems.RemoveRange(cart.CartItems);
 
-//            return Ok(orders);
-//        }
-//        [HttpPatch("{id}/status")]
-//        public async Task<IActionResult> UpdateStatus(int id, OrderUpdateStatusDTO statusDto)
-//        {
-//            var order = await _context.Orders.FindAsync(id);
-//            if (order == null) return NotFound("الأوردر غير موجود");
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
-//            // نحدث فقط الحقل المطلوب
-//            order.Status = statusDto.NewStatus;
+                return Ok(new
+                {
+                    message = "تم تسجيل الطلب بنجاح وتفريغ السلة",
+                    orderId = order.OrderId,
+                    totalAmount = total
+                });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return BadRequest($"حدث خطأ: {ex.Message}");
+            }
+        }
 
-//            await _context.SaveChangesAsync();
-//            return Ok(new { message = "تم تحديث الحالة بنجاح" });
-//        }
-//        [HttpDelete("{id}")]
-//        public async Task<IActionResult> DeleteOrder(int id)
-//        {
-//            var order = await _context.Orders
-//                .Include(o => o.OrderProducts)
-//                .FirstOrDefaultAsync(o => o.OrderId == id);
+        // 2. جلب أوردر محدد بالتفاصيل
+        [HttpGet("{id}")]
+        public async Task<ActionResult> GetOrder(int id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-//            if (order == null) return NotFound();
+            var order = await _context.Orders
+                .Include(o => o.OrderProducts)
+                .ThenInclude(op => op.Product)
+                .FirstOrDefaultAsync(o => o.OrderId == id && o.BuyerId == userId);
 
-//            // مسح روابط المنتجات أولاً
-//            _context.OrderProducts.RemoveRange(order.OrderProducts);
+            if (order == null) return NotFound("الأوردر غير موجود أو لا تملك صلاحية الوصول إليه.");
 
-//            // مسح الأوردر
-//            _context.Orders.Remove(order);
+            return Ok(order);
+        }
 
-//            await _context.SaveChangesAsync();
-//            return Ok("تم حذف الأوردر وبياناته");
-//        }
+        // 3. جلب كل أوردرات اليوزر الحالي
+        [HttpGet("MyOrders")]
+        public async Task<ActionResult> GetMyOrders()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-//    }
-//}
+            var orders = await _context.Orders
+                .Where(o => o.BuyerId == userId)
+                .OrderByDescending(o => o.OrderDate)
+                .Select(o => new {
+                    o.OrderId,
+                    o.OrderDate,
+                    o.TotalPrice,
+                    o.Status,
+                    ItemCount = o.OrderProducts.Count()
+                })
+                .ToListAsync();
+
+            return Ok(orders);
+        }
+
+        // 4. تحديث حالة الأوردر (للأدمن مثلاً)
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] string newStatus)
+        {
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null) return NotFound("الأوردر غير موجود");
+
+            order.Status = newStatus;
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "تم تحديث حالة الطلب بنجاح" });
+        }
+
+        // 5. حذف أوردر (Cancel Order)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteOrder(int id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var order = await _context.Orders
+                .Include(o => o.OrderProducts)
+                .FirstOrDefaultAsync(o => o.OrderId == id && o.BuyerId == userId);
+
+            if (order == null) return NotFound();
+
+            _context.OrderProducts.RemoveRange(order.OrderProducts);
+            _context.Orders.Remove(order);
+            await _context.SaveChangesAsync();
+
+            return Ok("تم إلغاء الطلب بنجاح.");
+        }
+    }
+}
