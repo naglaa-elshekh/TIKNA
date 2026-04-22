@@ -77,4 +77,49 @@ public class CartController : ControllerBase
         await _context.SaveChangesAsync();
         return Ok(new { message = "تم تحديث السلة بنجاح." });
     }
+    [HttpDelete("RemoveItem/{productId}")]
+    public async Task<IActionResult> RemoveItem(int productId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        // بنجيب السلة بتاعة المستخدم الأول
+        var cart = await _context.Carts.Include(c => c.CartItems)
+                                       .FirstOrDefaultAsync(c => c.UserId == userId);
+
+        if (cart == null) return NotFound("السلة غير موجودة");
+
+        // بندور على المنتج المعين جوه السلة دي
+        var itemToRemove = cart.CartItems.FirstOrDefault(ci => ci.ProductId == productId);
+
+        if (itemToRemove == null)
+        {
+            return NotFound("هذا المنتج غير موجود في سلتك");
+        }
+
+        // بنمسح المنتج ده بس
+        _context.CartItems.Remove(itemToRemove);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { Message = "تم حذف المنتج من السلة بنجاح" });
+    }
+    [HttpDelete("Clear")]
+    public async Task<IActionResult> ClearCart()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        // بنجيب السلة وكل العناصر اللي جواها
+        var cart = await _context.Carts.Include(c => c.CartItems)
+                                       .FirstOrDefaultAsync(c => c.UserId == userId);
+
+        if (cart == null || !cart.CartItems.Any())
+        {
+            return Ok(new { Message = "السلة فارغة بالفعل" });
+        }
+
+        // بنمسح كل العناصر اللي جوه قائمة CartItems دفعة واحدة
+        _context.CartItems.RemoveRange(cart.CartItems);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { Message = "تم تفريغ السلة بنجاح" });
+    }
 }
