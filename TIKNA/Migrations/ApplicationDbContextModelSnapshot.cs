@@ -50,19 +50,19 @@ namespace TIKNA.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "a644171b-f0b6-4eb4-877a-d51ea6f6c521",
+                            Id = "1",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = "659969a2-2c0c-4749-9ff3-2e0d034c2a74",
+                            Id = "2",
                             Name = "Student",
                             NormalizedName = "STUDENT"
                         },
                         new
                         {
-                            Id = "a3cad7e3-0c84-4ec4-a101-59a9c879a081",
+                            Id = "3",
                             Name = "Company",
                             NormalizedName = "COMPANY"
                         });
@@ -157,8 +157,8 @@ namespace TIKNA.Migrations
                     b.HasData(
                         new
                         {
-                            UserId = "11112f36-1a35-4e01-9e80-4c68da86e531",
-                            RoleId = "a644171b-f0b6-4eb4-877a-d51ea6f6c521"
+                            UserId = "7619e589-693e-433a-b48f-eb0d1d66408e",
+                            RoleId = "1"
                         });
                 });
 
@@ -249,6 +249,7 @@ namespace TIKNA.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("RentalPricePerDay")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("ScreenSize")
@@ -362,20 +363,20 @@ namespace TIKNA.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "11112f36-1a35-4e01-9e80-4c68da86e531",
+                            Id = "7619e589-693e-433a-b48f-eb0d1d66408e",
                             AccessFailedCount = 0,
                             Address = "Main Admin Office",
                             ApprovalStatus = "Approved",
-                            ConcurrencyStamp = "1af4fa17-1be8-4abd-9881-49562a76b347",
+                            ConcurrencyStamp = "bd3f0ac9-6024-4a30-a423-a6539cd2f18d",
                             Email = "admin@tikna.com",
                             EmailConfirmed = true,
                             LockoutEnabled = false,
                             Name = "System Admin",
                             NormalizedEmail = "ADMIN@TIKNA.COM",
                             NormalizedUserName = "ADMIN@TIKNA.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEDnGopGgSXhH7m2mHfCgwPztOIcTX2XTg8WLkiU1qBsv/cmDKhXwQz/zDUvec6XfZA==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEBfml3ALcGYpB0bCtAORwJJ9rEvA5canNrR+8coHFaEth3+AJauSkd4R0fYrVUNNGA==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "cad8bfe5-c2ad-4aa3-ae00-dd40e217b704",
+                            SecurityStamp = "0af59b5f-d849-44c8-a1d6-cdf1c215a300",
                             TwoFactorEnabled = false,
                             UserName = "admin@tikna.com",
                             UserType = "Admin"
@@ -552,13 +553,17 @@ namespace TIKNA.Migrations
 
                     b.HasKey("PaymentId");
 
-                    b.HasIndex("MaintenanceRequestId");
+                    b.HasIndex("MaintenanceRequestId")
+                        .IsUnique()
+                        .HasFilter("[MaintenanceRequestId] IS NOT NULL");
 
                     b.HasIndex("OrderId")
                         .IsUnique()
                         .HasFilter("[OrderId] IS NOT NULL");
 
-                    b.HasIndex("RentalId");
+                    b.HasIndex("RentalId")
+                        .IsUnique()
+                        .HasFilter("[RentalId] IS NOT NULL");
 
                     b.ToTable("Payments");
                 });
@@ -694,7 +699,7 @@ namespace TIKNA.Migrations
                     b.HasOne("Product", "Product")
                         .WithMany("MaintenanceRequests")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TIKNA.Models.ApplicationUser", "User")
@@ -741,17 +746,19 @@ namespace TIKNA.Migrations
             modelBuilder.Entity("TIKNA.Models.Payment", b =>
                 {
                     b.HasOne("TIKNA.Models.MaintenanceRequest", "MaintenanceRequest")
-                        .WithMany()
-                        .HasForeignKey("MaintenanceRequestId");
+                        .WithOne("Payment")
+                        .HasForeignKey("TIKNA.Models.Payment", "MaintenanceRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("TIKNA.Models.Order", "Order")
-                        .WithOne()
+                        .WithOne("Payment")
                         .HasForeignKey("TIKNA.Models.Payment", "OrderId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("TIKNA.Models.Rental", "Rental")
-                        .WithMany()
-                        .HasForeignKey("RentalId");
+                        .WithOne("Payment")
+                        .HasForeignKey("TIKNA.Models.Payment", "RentalId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("MaintenanceRequest");
 
@@ -765,7 +772,7 @@ namespace TIKNA.Migrations
                     b.HasOne("Product", "Product")
                         .WithMany("Rentals")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TIKNA.Models.ApplicationUser", "Renter")
@@ -800,9 +807,21 @@ namespace TIKNA.Migrations
                     b.Navigation("CartItems");
                 });
 
+            modelBuilder.Entity("TIKNA.Models.MaintenanceRequest", b =>
+                {
+                    b.Navigation("Payment");
+                });
+
             modelBuilder.Entity("TIKNA.Models.Order", b =>
                 {
                     b.Navigation("OrderProducts");
+
+                    b.Navigation("Payment");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.Rental", b =>
+                {
+                    b.Navigation("Payment");
                 });
 #pragma warning restore 612, 618
         }

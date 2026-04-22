@@ -38,7 +38,6 @@ namespace TIKNA.Models
         public int TotalDays => (EndDate - StartDate).Days;
 
         // الربط مع الدفع (اختياري حالياً)
-        // public int? PaymentId { get; set; }
-        // public virtual Payment? Payment { get; set; }
+         public virtual Payment? Payment { get; set; }
     }
 }

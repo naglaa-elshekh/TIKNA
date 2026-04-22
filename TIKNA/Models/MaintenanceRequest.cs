@@ -35,7 +35,6 @@ namespace TIKNA.Models
         public string Status { get; set; } = "Pending";
 
         // الربط مع الدفع (اختياري حالياً)
-        // public int? PaymentId { get; set; }
-        // public virtual Payment? Payment { get; set; }
+         public virtual Payment? Payment { get; set; }
     }
 }

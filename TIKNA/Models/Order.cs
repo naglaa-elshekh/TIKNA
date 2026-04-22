@@ -33,7 +33,6 @@ namespace TIKNA.Models
         public virtual ICollection<OrderProd> OrderProducts { get; set; } = new HashSet<OrderProd>();
 
         // الربط مع الدفع (اختياري في البداية)
-        // public int? PaymentId { get; set; }
-        // public virtual Payment? Payment { get; set; }
+         public virtual Payment? Payment { get; set; }
     }
 }

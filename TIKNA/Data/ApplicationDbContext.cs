@@ -3,9 +3,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TIKNA.Models;
 
- using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;using TIKNA.Models;public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
@@ -22,26 +20,32 @@ using Microsoft.EntityFrameworkCore;using TIKNA.Models;public class ApplicationD
     {
         base.OnModelCreating(builder);
 
-<<<<<<< Updated upstream
         // 1. علاقة الـ OrderProd (Many-to-Many)
         builder.Entity<OrderProd>().HasKey(op => new { op.OrderId, op.ProductId });
-=======
-//      
-        builder.Entity<OrderProd>()
-    .HasKey(op => new { op.OrderId, op.ProductId });
-
-
 
         builder.Entity<OrderProd>()
-        .HasOne(op => op.Order)
-        .WithMany(o => o.OrderProducts)
-        .HasForeignKey(op => op.OrderId);
+            .HasOne(op => op.Order)
+            .WithMany(o => o.OrderProducts)
+            .HasForeignKey(op => op.OrderId);
 
+        builder.Entity<OrderProd>()
+            .HasOne(op => op.Product)
+            .WithMany(p => p.OrderProducts)
+            .HasForeignKey(op => op.ProductId)
+            .OnDelete(DeleteBehavior.NoAction);
+        // 5. ضبط الدقة المالية
+        builder.Entity<Product>().Property(p => p.Price).HasPrecision(18, 2);
+
+        // أضيفي هذا السطر الآن لحل التحذير
+        builder.Entity<Product>().Property(p => p.RentalPricePerDay).HasPrecision(18, 2);
+
+
+        // 2. علاقات الـ Payment (One-to-One)
         builder.Entity<Payment>()
-     .HasOne(p => p.Order)
-     .WithOne(o => o.Payment)
-     .HasForeignKey<Payment>(p => p.OrderId)
-     .OnDelete(DeleteBehavior.Restrict);
+            .HasOne(p => p.Order)
+            .WithOne(o => o.Payment)
+            .HasForeignKey<Payment>(p => p.OrderId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.Entity<Payment>()
             .HasOne(p => p.Rental)
@@ -55,7 +59,7 @@ using Microsoft.EntityFrameworkCore;using TIKNA.Models;public class ApplicationD
             .HasForeignKey<Payment>(p => p.MaintenanceRequestId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // العلاقات Product → MaintenanceRequest / Rental / OrderProducts
+        // 3. علاقات المنتجات (الصيانة والإيجار)
         builder.Entity<MaintenanceRequest>()
             .HasOne(m => m.Product)
             .WithMany(p => p.MaintenanceRequests)
@@ -67,43 +71,25 @@ using Microsoft.EntityFrameworkCore;using TIKNA.Models;public class ApplicationD
             .WithMany(p => p.Rentals)
             .HasForeignKey(r => r.ProductId)
             .OnDelete(DeleteBehavior.Restrict);
->>>>>>> Stashed changes
 
-        builder.Entity<OrderProd>()
-            .HasOne(op => op.Product)
-            .WithMany(p => p.OrderProducts)
-            .HasForeignKey(op => op.ProductId)
-            .OnDelete(DeleteBehavior.NoAction); // تغيير لـ NoAction
-
-        // 2. علاقة الـ Cart بالمستخدم
+        // 4. علاقة الـ Cart والـ CartItem
         builder.Entity<Cart>()
             .HasOne(c => c.User)
             .WithOne()
             .HasForeignKey<Cart>(c => c.UserId)
-            .OnDelete(DeleteBehavior.NoAction); // تغيير لـ NoAction
+            .OnDelete(DeleteBehavior.NoAction);
 
-        // 3. علاقة الـ CartItem (لب المشكلة)
         builder.Entity<CartItem>()
             .HasOne(ci => ci.Cart)
             .WithMany(c => c.CartItems)
             .HasForeignKey(ci => ci.CartId)
-            .OnDelete(DeleteBehavior.NoAction); // كسر المسار الأول
+            .OnDelete(DeleteBehavior.NoAction);
 
         builder.Entity<CartItem>()
             .HasOne(ci => ci.Product)
             .WithMany()
             .HasForeignKey(ci => ci.ProductId)
-            .OnDelete(DeleteBehavior.NoAction); // كسر المسار الثاني
-
-        // 4. علاقات الـ Payment والصيانة والإيجار (تأمين إضافي)
-        builder.Entity<Payment>()
-            .HasOne(p => p.Order).WithOne().HasForeignKey<Payment>(p => p.OrderId).OnDelete(DeleteBehavior.NoAction);
-
-        builder.Entity<MaintenanceRequest>()
-            .HasOne(m => m.Product).WithMany(p => p.MaintenanceRequests).HasForeignKey(m => m.ProductId).OnDelete(DeleteBehavior.NoAction);
-
-        builder.Entity<Rental>()
-            .HasOne(r => r.Product).WithMany(p => p.Rentals).HasForeignKey(r => r.ProductId).OnDelete(DeleteBehavior.NoAction);
+            .OnDelete(DeleteBehavior.NoAction);
 
         // 5. ضبط الدقة المالية
         builder.Entity<Product>().Property(p => p.Price).HasPrecision(18, 2);
@@ -111,12 +97,10 @@ using Microsoft.EntityFrameworkCore;using TIKNA.Models;public class ApplicationD
         builder.Entity<OrderProd>().Property(op => op.UnitPrice).HasPrecision(18, 2);
         builder.Entity<Payment>().Property(p => p.Amount).HasPrecision(18, 2);
 
-
-
-        // 1. Seed Roles
-        string adminRoleId = Guid.NewGuid().ToString();
-        string studentRoleId = Guid.NewGuid().ToString();
-        string companyRoleId = Guid.NewGuid().ToString();
+        // 6. Seed Data (البيانات الأساسية)
+        string adminRoleId ="1";
+        string studentRoleId ="2";
+        string companyRoleId ="3";
 
         builder.Entity<IdentityRole>().HasData(
             new IdentityRole { Id = adminRoleId, Name = "Admin", NormalizedName = "ADMIN" },
@@ -124,7 +108,6 @@ using Microsoft.EntityFrameworkCore;using TIKNA.Models;public class ApplicationD
             new IdentityRole { Id = companyRoleId, Name = "Company", NormalizedName = "COMPANY" }
         );
 
-        // 2. Seed Admin User
         var adminUser = new ApplicationUser
         {
             Id = Guid.NewGuid().ToString(),
@@ -135,8 +118,6 @@ using Microsoft.EntityFrameworkCore;using TIKNA.Models;public class ApplicationD
             EmailConfirmed = true,
             UserType = "Admin",
             ApprovalStatus = "Approved",
-
-            // الحل هنا: لازم تدي قيمة لكل خاصية "Required" ضفتيها في الـ ApplicationUser
             Address = "Main Admin Office",
             Name = "System Admin",
         };
@@ -146,7 +127,6 @@ using Microsoft.EntityFrameworkCore;using TIKNA.Models;public class ApplicationD
 
         builder.Entity<ApplicationUser>().HasData(adminUser);
 
-        // 3. Assign Admin to Role
         builder.Entity<IdentityUserRole<string>>().HasData(new IdentityUserRole<string>
         {
             RoleId = adminRoleId,

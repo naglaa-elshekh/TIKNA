@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace TIKNA.Migrations
 {
     /// <inheritdoc />
-    public partial class intial : Migration
+    public partial class FinalMergeFix : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -212,21 +214,33 @@ namespace TIKNA.Migrations
                     ProductId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Brand = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Model = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CPU = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RAM = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Storage = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    GPU = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ScreenSize = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Color = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Condition = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Price = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Quantity = table.Column<int>(type: "int", nullable: false),
-                    Brand = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Category = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ForSale = table.Column<bool>(type: "bit", nullable: false),
+                    ForRent = table.Column<bool>(type: "bit", nullable: false),
+                    RentalPricePerDay = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    OwnerId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Products", x => x.ProductId);
                     table.ForeignKey(
-                        name: "FK_Products_AspNetUsers_OwnerId",
-                        column: x => x.OwnerId,
+                        name: "FK_Products_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -282,7 +296,8 @@ namespace TIKNA.Migrations
                         name: "FK_MaintenanceRequests_Products_ProductId",
                         column: x => x.ProductId,
                         principalTable: "Products",
-                        principalColumn: "ProductId");
+                        principalColumn: "ProductId",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -336,7 +351,8 @@ namespace TIKNA.Migrations
                         name: "FK_Rentals_Products_ProductId",
                         column: x => x.ProductId,
                         principalTable: "Products",
-                        principalColumn: "ProductId");
+                        principalColumn: "ProductId",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -360,18 +376,41 @@ namespace TIKNA.Migrations
                         name: "FK_Payments_MaintenanceRequests_MaintenanceRequestId",
                         column: x => x.MaintenanceRequestId,
                         principalTable: "MaintenanceRequests",
-                        principalColumn: "MaintenanceRequestId");
+                        principalColumn: "MaintenanceRequestId",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Payments_Orders_OrderId",
                         column: x => x.OrderId,
                         principalTable: "Orders",
-                        principalColumn: "OrderId");
+                        principalColumn: "OrderId",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Payments_Rentals_RentalId",
                         column: x => x.RentalId,
                         principalTable: "Rentals",
-                        principalColumn: "RentalId");
+                        principalColumn: "RentalId",
+                        onDelete: ReferentialAction.Restrict);
                 });
+
+            migrationBuilder.InsertData(
+                table: "AspNetRoles",
+                columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
+                values: new object[,]
+                {
+                    { "1", null, "Admin", "ADMIN" },
+                    { "2", null, "Student", "STUDENT" },
+                    { "3", null, "Company", "COMPANY" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "AspNetUsers",
+                columns: new[] { "Id", "AccessFailedCount", "Address", "ApprovalStatus", "Bio", "CommercialRegister", "CompanyServiceType", "ConcurrencyStamp", "Email", "EmailConfirmed", "Faculty", "LockoutEnabled", "LockoutEnd", "Name", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "SecurityStamp", "TwoFactorEnabled", "University", "UserName", "UserType" },
+                values: new object[] { "45786c78-6add-4cc1-b2b6-7a30c9428356", 0, "Main Admin Office", "Approved", null, null, null, "0c21c425-c0c5-49f3-abdb-61d063f23ed0", "admin@tikna.com", true, null, false, null, "System Admin", "ADMIN@TIKNA.COM", "ADMIN@TIKNA.COM", "AQAAAAIAAYagAAAAEO4DkInSoyhf1nVmv7jAck89OIHM/TkzF0iICH2YX8IbcO1KLXspRQaZxsktj9031Q==", null, false, "59d29541-684c-404b-8464-479827134043", false, null, "admin@tikna.com", "Admin" });
+
+            migrationBuilder.InsertData(
+                table: "AspNetUserRoles",
+                columns: new[] { "RoleId", "UserId" },
+                values: new object[] { "1", "45786c78-6add-4cc1-b2b6-7a30c9428356" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -451,7 +490,9 @@ namespace TIKNA.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Payments_MaintenanceRequestId",
                 table: "Payments",
-                column: "MaintenanceRequestId");
+                column: "MaintenanceRequestId",
+                unique: true,
+                filter: "[MaintenanceRequestId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Payments_OrderId",
@@ -463,12 +504,14 @@ namespace TIKNA.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Payments_RentalId",
                 table: "Payments",
-                column: "RentalId");
+                column: "RentalId",
+                unique: true,
+                filter: "[RentalId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Products_OwnerId",
+                name: "IX_Products_ApplicationUserId",
                 table: "Products",
-                column: "OwnerId");
+                column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Rentals_ProductId",
