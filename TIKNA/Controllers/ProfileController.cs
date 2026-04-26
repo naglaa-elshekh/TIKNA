@@ -1,15 +1,15 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using TIKNA.DTOs;
 using TIKNA.Models;
+using TIKNA.Data;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize]
+[Authorize] // تأمين الكنترولر بشكل عام
 public class ProfileController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
@@ -20,7 +20,9 @@ public class ProfileController : ControllerBase
         _context = context;
         _userManager = userManager;
     }
-    [Authorize(Roles = "Student")] // التعديل هنا: هيسمح فقط للطلاب بالوصول للـ API ده
+
+    // هذا الأكشن متاح فقط للمستخدم الذي يملك رول Student
+    [Authorize(Roles = "Student")]
     [HttpGet("GetDashboardData")]
     public async Task<IActionResult> GetDashboardData()
     {
@@ -29,109 +31,85 @@ public class ProfileController : ControllerBase
 
         if (user == null) return NotFound("User not found");
 
-        // دي الخطوة اللي بتمنع الـ null: بنجيب لستة الرولز كاملة
         var roles = await _userManager.GetRolesAsync(user);
 
+        // تجميع بيانات البروفايل الأساسية
         var profileInfo = new
         {
             user.Name,
             user.Email,
             user.Address,
             user.University,
-            user.PhoneNumber ,
-
-            // بنبعت أول رول موجود في القائمة للفرونت إند
-            Role = roles.FirstOrDefault()
+            user.PhoneNumber,
+            user.Faculty, // مضاف للطالب
+            Role = "Student"
         };
 
-        // التمييز الدقيق باستخدام Contains
-        if (roles.Contains("Admin"))
+        // جلب الطلبات وطلبات الصيانة الخاصة بهذا الطالب فقط
+        var myOrders = await _context.Orders
+            .Where(o => o.BuyerId == currentUserId)
+            .ToListAsync();
+
+        var myMaintenance = await _context.MaintenanceRequests
+            .Where(m => m.UserId == currentUserId)
+            .ToListAsync();
+
+        return Ok(new
         {
-            return Ok(new { Info = profileInfo, Message = "مرحباً بك في لوحة تحكم الإدارة" });
-        }
-
-        if (roles.Contains("Company"))
-        {
-            var myProducts = await _context.Products
-                .Where(p => p.ApplicationUserId == currentUserId)
-                .ToListAsync();
-
-            return Ok(new { Info = profileInfo, Products = myProducts });
-        }
-
-        if (roles.Contains("Student"))
-        {
-            var myOrders = await _context.Orders.Where(o => o.BuyerId == currentUserId).ToListAsync();
-            var myMaintenance = await _context.MaintenanceRequests.Where(m => m.UserId == currentUserId).ToListAsync();
-
-            return Ok(new { Info = profileInfo, Orders = myOrders, Maintenance = myMaintenance });
-        }
-
-        return BadRequest("User has no assigned role");
+            Info = profileInfo,
+            Orders = myOrders,
+            Maintenance = myMaintenance
+        });
     }
+
     [HttpPost("UpdateProfile")]
     public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto model)
     {
-        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var user = await _userManager.FindByIdAsync(currentUserId);
+        var user = await _userManager.FindByIdAsync(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        if (user == null) return NotFound();
 
-        if (user == null) return NotFound("User not found");
-
-        // 1. التأكد من الباسوورد قبل أي تعديل
-        var isPasswordValid = await _userManager.CheckPasswordAsync(user, model.CurrentPassword);
-        if (!isPasswordValid)
-        {
-            return BadRequest("كلمة المرور الحالية غير صحيحة");
-        }
-
-        // 2. تحديث البيانات المسموح بها فقط
-        user.Address = model.Address;
+        user.Name = model.Name;
         user.PhoneNumber = model.PhoneNumber;
-        user.Bio = model.Bio; // لو شركة
-        user.Faculty = model.Faculty; // لو طالب
+        user.Address = model.Address;
+        user.University = model.University;
+        user.Faculty = model.Faculty;
 
-        var result = await _userManager.UpdateAsync(user);
-
-        if (result.Succeeded)
-        {
-            return Ok(new { Message = "تم تحديث البيانات بنجاح" });
-        }
-
-        return BadRequest(result.Errors);
+        await _userManager.UpdateAsync(user);
+        return Ok(new { Message = "تم التحديث بنجاح" });
     }
+
+    // [ب] تغيير كلمة المرور
     [HttpPost("ChangePassword")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto model)
     {
-        // 1. التأكد أن الباسوورد الجديد وتأكيده متطابقين
-        if (model.NewPassword != model.ConfirmPassword)
-        {
-            return BadRequest("كلمة المرور الجديدة وتأكيدها غير متطابقين");
-        }
+        if (model.NewPassword != model.ConfirmPassword) return BadRequest("كلمات المرور غير متطابقة");
 
-        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var user = await _userManager.FindByIdAsync(currentUserId);
-
-        if (user == null) return NotFound("User not found");
-
-        // 2. استخدام ميثود جاهزة في Identity بتعمل (تأكد من القديم + تغيير للجديد) في خطوة واحدة
+        var user = await _userManager.FindByIdAsync(User.FindFirstValue(ClaimTypes.NameIdentifier));
         var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
 
-        if (result.Succeeded)
-        {
-            return Ok(new { Message = "تم تغيير كلمة المرور بنجاح" });
-        }
-
-        // بنشوف أول خطأ رجع من السيستم عشان نترجمه
-        var error = result.Errors.FirstOrDefault();
-
-        if (error?.Code == "PasswordMismatch")
-        {
-            // دي الرسالة اللي هتظهر لو الباسوورد القديم اللي دخله غلط
-            return BadRequest("كلمة المرور الحالية التي أدخلتها غير صحيحة.");
-        }
-
-        // لو فيه أي خطأ تاني (مثلاً السيستم رافض الباسوورد الجديد لأنه ضعيف)
-        // هيرجع الأخطاء التقنية عشان المبرمج أو اليوزر يعرف إيه شروط الباسوورد
+        if (result.Succeeded) return Ok(new { Message = "تم تغيير الباسورد" });
         return BadRequest(result.Errors);
+    }
+
+    // [ج] رفع الصورة الشخصية
+    [HttpPost("UploadProfilePicture")]
+    public async Task<IActionResult> UploadImage(IFormFile image)
+    {
+        var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/profiles");
+        if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
+
+        var fileName = $"{Guid.NewGuid()}_{image.FileName}";
+        var filePath = Path.Combine(folderPath, fileName);
+
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await image.CopyToAsync(stream);
+        }
+
+        var user = await _userManager.FindByIdAsync(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        user.ProfilePictureUrl = $"/profiles/{fileName}";
+        await _userManager.UpdateAsync(user);
+
+        return Ok(new { url = user.ProfilePictureUrl });
     }
 }

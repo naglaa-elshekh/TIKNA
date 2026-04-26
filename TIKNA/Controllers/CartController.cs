@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using TIKNA.Data;
 using TIKNA.Models;
 
 [Route("api/[controller]")]

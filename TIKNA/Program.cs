@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using TIKNA.Models;
-using Microsoft.IdentityModel.Logging; // „Â„… ·≈ŸÂ«—  ›«’Ì· «·Œÿ√
+using Microsoft.IdentityModel.Logging;
+using TIKNA.Data; // „Â„… ·≈ŸÂ«—  ›«’Ì· «·Œÿ√
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -159,5 +160,6 @@ using (var scope = app.Services.CreateScope())
         }
     }
 }
+
 
 app.Run();

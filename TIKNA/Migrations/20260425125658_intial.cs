@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TIKNA.Migrations
 {
     /// <inheritdoc />
-    public partial class FinalMergeFix : Migration
+    public partial class intial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -230,7 +230,7 @@ namespace TIKNA.Migrations
                     Category = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ForSale = table.Column<bool>(type: "bit", nullable: false),
                     ForRent = table.Column<bool>(type: "bit", nullable: false),
-                    RentalPricePerDay = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    RentalPricePerDay = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
@@ -275,29 +275,39 @@ namespace TIKNA.Migrations
                 name: "MaintenanceRequests",
                 columns: table => new
                 {
-                    MaintenanceRequestId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    OrderNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Brand = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ModelName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DeviceAge = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ProblemType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ServiceType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PreferredDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    PreferredTimeSlot = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    EstimatedPriceMin = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    EstimatedPriceMax = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ProductId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    IssueDescription = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    RequestDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_MaintenanceRequests", x => x.MaintenanceRequestId);
+                    table.PrimaryKey("PK_MaintenanceRequests", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_MaintenanceRequests_AspNetUsers_UserId",
-                        column: x => x.UserId,
+                        name: "FK_MaintenanceRequests_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_MaintenanceRequests_Products_ProductId",
                         column: x => x.ProductId,
                         principalTable: "Products",
                         principalColumn: "ProductId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -321,6 +331,35 @@ namespace TIKNA.Migrations
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_OrderProducts_Products_ProductId",
+                        column: x => x.ProductId,
+                        principalTable: "Products",
+                        principalColumn: "ProductId");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RentalRequests",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ProductId = table.Column<int>(type: "int", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    TotalPrice = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RentalRequests", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RentalRequests_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_RentalRequests_Products_ProductId",
                         column: x => x.ProductId,
                         principalTable: "Products",
                         principalColumn: "ProductId");
@@ -376,7 +415,7 @@ namespace TIKNA.Migrations
                         name: "FK_Payments_MaintenanceRequests_MaintenanceRequestId",
                         column: x => x.MaintenanceRequestId,
                         principalTable: "MaintenanceRequests",
-                        principalColumn: "MaintenanceRequestId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Payments_Orders_OrderId",
@@ -405,12 +444,12 @@ namespace TIKNA.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
                 columns: new[] { "Id", "AccessFailedCount", "Address", "ApprovalStatus", "Bio", "CommercialRegister", "CompanyServiceType", "ConcurrencyStamp", "Email", "EmailConfirmed", "Faculty", "LockoutEnabled", "LockoutEnd", "Name", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "SecurityStamp", "TwoFactorEnabled", "University", "UserName", "UserType" },
-                values: new object[] { "45786c78-6add-4cc1-b2b6-7a30c9428356", 0, "Main Admin Office", "Approved", null, null, null, "0c21c425-c0c5-49f3-abdb-61d063f23ed0", "admin@tikna.com", true, null, false, null, "System Admin", "ADMIN@TIKNA.COM", "ADMIN@TIKNA.COM", "AQAAAAIAAYagAAAAEO4DkInSoyhf1nVmv7jAck89OIHM/TkzF0iICH2YX8IbcO1KLXspRQaZxsktj9031Q==", null, false, "59d29541-684c-404b-8464-479827134043", false, null, "admin@tikna.com", "Admin" });
+                values: new object[] { "admin-id-123", 0, "Main Admin Office", "Approved", null, null, null, "46a0a865-eb05-4ffd-90e3-91544ff370e2", "admin@tikna.com", true, null, false, null, "System Admin", "ADMIN@TIKNA.COM", "ADMIN@TIKNA.COM", "AQAAAAIAAYagAAAAEHzCoVrCQn/n0VZ7A9AS5ROLXpD356pkoA9QV3txtpD1SFNPZ05+8s7wTAIdNqPnOA==", null, false, "3cfdab1a-3348-412f-9427-936adc920982", false, null, "admin@tikna.com", "Admin" });
 
             migrationBuilder.InsertData(
                 table: "AspNetUserRoles",
                 columns: new[] { "RoleId", "UserId" },
-                values: new object[] { "1", "45786c78-6add-4cc1-b2b6-7a30c9428356" });
+                values: new object[] { "1", "admin-id-123" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -468,14 +507,14 @@ namespace TIKNA.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceRequests_ApplicationUserId",
+                table: "MaintenanceRequests",
+                column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_MaintenanceRequests_ProductId",
                 table: "MaintenanceRequests",
                 column: "ProductId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_MaintenanceRequests_UserId",
-                table: "MaintenanceRequests",
-                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OrderProducts_ProductId",
@@ -514,6 +553,16 @@ namespace TIKNA.Migrations
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RentalRequests_ProductId",
+                table: "RentalRequests",
+                column: "ProductId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RentalRequests_UserId",
+                table: "RentalRequests",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Rentals_ProductId",
                 table: "Rentals",
                 column: "ProductId");
@@ -550,6 +599,9 @@ namespace TIKNA.Migrations
 
             migrationBuilder.DropTable(
                 name: "Payments");
+
+            migrationBuilder.DropTable(
+                name: "RentalRequests");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");

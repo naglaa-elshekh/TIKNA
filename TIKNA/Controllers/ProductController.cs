@@ -5,6 +5,7 @@ using System.Security.Claims;
 using TIKNA.Models;
 using TIKNA.Models.Dtos;// تأكدي من مسار الـ DTOs
 using Microsoft.AspNetCore.Identity;
+using TIKNA.Data;
 
 
 namespace Tikna.Controllers

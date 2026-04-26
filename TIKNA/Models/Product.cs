@@ -25,7 +25,8 @@ public class Product
     public string? GPU { get; set; }
     public string? ScreenSize { get; set; }
     public string? Color { get; set; }
-    public string? Condition { get; set; }
+    public string? Condition { get; set;}
+
 
     [Required]
     [Column(TypeName = "decimal(18,2)")]

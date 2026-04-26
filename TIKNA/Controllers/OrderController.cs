@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using TIKNA.Models;
+using TIKNA.Data;
 
 
 namespace TIKNA.Controllers
@@ -109,7 +110,8 @@ namespace TIKNA.Controllers
             var orders = await _context.Orders
                 .Where(o => o.BuyerId == userId)
                 .OrderByDescending(o => o.OrderDate)
-                .Select(o => new {
+                .Select(o => new
+                {
                     o.OrderId,
                     o.OrderDate,
                     o.TotalPrice,

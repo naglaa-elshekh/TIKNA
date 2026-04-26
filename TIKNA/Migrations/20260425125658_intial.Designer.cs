@@ -5,14 +5,15 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using TIKNA.Data;
 
 #nullable disable
 
 namespace TIKNA.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260422194012_FinalMergeFix")]
-    partial class FinalMergeFix
+    [Migration("20260425125658_intial")]
+    partial class intial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -160,7 +161,7 @@ namespace TIKNA.Migrations
                     b.HasData(
                         new
                         {
-                            UserId = "45786c78-6add-4cc1-b2b6-7a30c9428356",
+                            UserId = "admin-id-123",
                             RoleId = "1"
                         });
                 });
@@ -252,6 +253,7 @@ namespace TIKNA.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("RentalPricePerDay")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("ScreenSize")
@@ -365,20 +367,20 @@ namespace TIKNA.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "45786c78-6add-4cc1-b2b6-7a30c9428356",
+                            Id = "admin-id-123",
                             AccessFailedCount = 0,
                             Address = "Main Admin Office",
                             ApprovalStatus = "Approved",
-                            ConcurrencyStamp = "0c21c425-c0c5-49f3-abdb-61d063f23ed0",
+                            ConcurrencyStamp = "46a0a865-eb05-4ffd-90e3-91544ff370e2",
                             Email = "admin@tikna.com",
                             EmailConfirmed = true,
                             LockoutEnabled = false,
                             Name = "System Admin",
                             NormalizedEmail = "ADMIN@TIKNA.COM",
                             NormalizedUserName = "ADMIN@TIKNA.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEO4DkInSoyhf1nVmv7jAck89OIHM/TkzF0iICH2YX8IbcO1KLXspRQaZxsktj9031Q==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEHzCoVrCQn/n0VZ7A9AS5ROLXpD356pkoA9QV3txtpD1SFNPZ05+8s7wTAIdNqPnOA==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "59d29541-684c-404b-8464-479827134043",
+                            SecurityStamp = "3cfdab1a-3348-412f-9427-936adc920982",
                             TwoFactorEnabled = false,
                             UserName = "admin@tikna.com",
                             UserType = "Admin"
@@ -433,21 +435,63 @@ namespace TIKNA.Migrations
 
             modelBuilder.Entity("TIKNA.Models.MaintenanceRequest", b =>
                 {
-                    b.Property<int>("MaintenanceRequestId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaintenanceRequestId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("IssueDescription")
+                    b.Property<string>("ApplicationUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Brand")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DeviceAge")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("EstimatedPriceMax")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("EstimatedPriceMin")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ModelName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OrderNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("PreferredDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PreferredTimeSlot")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProblemType")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("RequestDate")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("ServiceType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -455,13 +499,13 @@ namespace TIKNA.Migrations
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("MaintenanceRequestId");
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId");
 
                     b.HasIndex("ProductId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("MaintenanceRequests");
                 });
@@ -604,6 +648,47 @@ namespace TIKNA.Migrations
                     b.ToTable("Rentals");
                 });
 
+            modelBuilder.Entity("TIKNA.Models.RentalRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RentalRequests");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -698,21 +783,17 @@ namespace TIKNA.Migrations
 
             modelBuilder.Entity("TIKNA.Models.MaintenanceRequest", b =>
                 {
+                    b.HasOne("TIKNA.Models.ApplicationUser", null)
+                        .WithMany("MaintenanceRequests")
+                        .HasForeignKey("ApplicationUserId");
+
                     b.HasOne("Product", "Product")
                         .WithMany("MaintenanceRequests")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("TIKNA.Models.ApplicationUser", "User")
-                        .WithMany("MaintenanceRequests")
-                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Product");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("TIKNA.Models.Order", b =>
@@ -786,6 +867,25 @@ namespace TIKNA.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("Renter");
+                });
+
+            modelBuilder.Entity("TIKNA.Models.RentalRequest", b =>
+                {
+                    b.HasOne("Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("TIKNA.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Product", b =>

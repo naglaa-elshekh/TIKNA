@@ -29,5 +29,6 @@ namespace TIKNA.Models
 
         public ICollection<Product>? Products { get; set; }
         public ICollection<MaintenanceRequest>? MaintenanceRequests { get; set; }
+        public string? ProfilePictureUrl { get; internal set; }
     }
 }
