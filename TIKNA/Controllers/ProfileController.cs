@@ -111,5 +111,10 @@ public class ProfileController : ControllerBase
         await _userManager.UpdateAsync(user);
 
         return Ok(new { url = user.ProfilePictureUrl });
+
+
+
+
+
     }
 }

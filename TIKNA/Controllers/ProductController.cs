@@ -93,7 +93,7 @@ namespace Tikna.Controllers
         }
 
         // 5. عرض المنتجات مع جلب اسم المالك
-        [HttpGet]
+        [HttpGet("GetProducts") ]
         public async Task<IActionResult> GetProducts()
         {
             var products = await _context.Products
@@ -112,6 +112,45 @@ namespace Tikna.Controllers
                 .ToListAsync();
 
             return Ok(products);
+        }
+
+
+        // 6. جلب تفاصيل منتج واحد بناءً على الـ ID
+        [HttpGet("GetProductById/{id}")]
+        public async Task<IActionResult> GetProductById(int id)
+        {
+            var product = await _context.Products
+                .Include(p => p.Owner)
+                .FirstOrDefaultAsync(p => p.ProductId == id);
+
+            if (product == null)
+                return NotFound(new { message = "الجهاز غير موجود" });
+
+            // إرجاع كل التفاصيل التي تحتاجها صفحة العرض
+            return Ok(new
+            {
+                product.ProductId,
+                product.Name,
+                product.Brand,
+                product.Model,
+                product.Price,
+                product.Quantity,
+                product.Category,
+                product.Condition,
+                product.Description,
+                product.CPU,
+                product.RAM,
+                product.Storage,
+                product.GPU,
+                product.ScreenSize,
+                product.Color,
+                product.ImageUrl,
+                product.ForSale,
+                product.ForRent,
+                product.RentalPricePerDay,
+                OwnerName = product.Owner?.Name,
+                OwnerPhone = product.Owner?.PhoneNumber
+            });
         }
     }
 }

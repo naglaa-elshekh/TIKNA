@@ -8,6 +8,7 @@ using System.Security.Claims;
 using System.Text;
 using TIKNA.DTOs;
 using TIKNA.Models;
+using TIKNA.Data;
 
 namespace TIKNA.Controllers
 {
@@ -18,15 +19,20 @@ namespace TIKNA.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
-
+        private readonly ApplicationDbContext _context;
         public AccountController(
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ApplicationDbContext context // ضفنا الـ context هنا
+
+            )
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _configuration = configuration;
+            _context = context; // ضفنا السطر ده هنا
+
         }
 
         // 1. تسجيل مستخدم جديد (طالب أو شركة)
@@ -140,5 +146,57 @@ namespace TIKNA.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+        [Authorize]
+        [HttpDelete("DeleteAccount")]
+        public async Task<IActionResult> DeleteAccount()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null) return NotFound("المستخدم غير موجود");
+
+            try
+            {
+                // 1. البحث عن سلة المستخدم
+                var cart = await _context.Carts.FirstOrDefaultAsync(c => c.UserId == userId);
+
+                if (cart != null)
+                {
+                    // 2. الحل الجوهري: مسح العناصر اللي جوه السلة الأول (CartItems)
+                    var cartItems = _context.CartItems.Where(ci => ci.CartId == cart.Id);
+                    if (cartItems.Any())
+                    {
+                        _context.CartItems.RemoveRange(cartItems);
+                    }
+
+                    // 3. مسح السلة نفسها
+                    _context.Carts.Remove(cart);
+
+                    // حفظ التغييرات عشان نفضي الطريق لحذف اليوزر
+                    await _context.SaveChangesAsync();
+                }
+
+                // 4. حذف المستخدم
+                var result = await _userManager.DeleteAsync(user);
+
+                if (result.Succeeded)
+                {
+                    return Ok(new { message = "تم حذف الحساب بنجاح" });
+                }
+
+                return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+            }
+            catch (Exception ex)
+            {
+                // عرض الخطأ الداخلي لو حصلت مشكلة تانية
+                return StatusCode(500, new
+                {
+                    message = "فشل الحذف بسبب قيود السلة",
+                    detail = ex.InnerException?.Message ?? ex.Message
+                });
+            }
+        }
     }
+
 }
