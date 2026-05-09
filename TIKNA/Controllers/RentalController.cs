@@ -38,7 +38,7 @@ namespace TIKNA.Controllers
             if (isBooked)
                 return BadRequest("الجهاز محجوز بالفعل في هذه الفترة");
 
-            decimal finalPrice = duration * product.Price;
+            decimal finalPrice = (decimal)(duration * product.RentalPricePerDay);
 
             var rental = new RentalRequest
             {

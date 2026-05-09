@@ -5,17 +5,19 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using TIKNA.Models;
 using Microsoft.IdentityModel.Logging;
-using TIKNA.Data; // ãåãÉ áÅÙåÇÑ ÊÝÇÕíá ÇáÎØÃ
-
+using TIKNA.Data;
 var builder = WebApplication.CreateBuilder(args);
 
-// ÅÙåÇÑ ÊÝÇÕíá ÇáÎØÃ Ýí ÇáÜ Console (ãåã ÌÏÇð ááãÑÍáÉ Ïí)
 IdentityModelEventSource.ShowPII = true;
 
 // 1. ÅÖÇÝÉ ÇáÎÏãÇÊ
-builder.Services.AddControllers();
-
-// ÅÚÏÇÏ ÇáÜ CORS
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // åÐÇ ÇáÓØÑ åæ ÇáÍá ÇáÓÍÑí áãÔßáÉ ÇáÜ 500 æÇáÜ JSON Error
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.WriteIndented = true;
+    });// ÅÚÏÇÏ ÇáÜ CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>

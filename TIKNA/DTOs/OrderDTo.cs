@@ -1,6 +1,6 @@
 ﻿public class OrderCreateDTO
 {
-    public int CustomerId { get; set; }
+    public int BuyerId { get; set; }
     // قائمة بمعرفات المنتجات التي اختارها الطالب من السلة
     public List<int> ProductIds { get; set; }
 }

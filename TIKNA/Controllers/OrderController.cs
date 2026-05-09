@@ -19,70 +19,75 @@ namespace TIKNA.Controllers
         {
             _context = context;
         }
-
         // 1. إنشاء أوردر جديد من السلة (Checkout)
-        [HttpPost("Checkout")]
-        public async Task<ActionResult> CreateOrder()
+        [HttpPost("checkout")]
+        public async Task<IActionResult> Checkout()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            // جلب الـ ID بتاع اليوزر اللي عامل Login حالياً من التوكن
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier); 
 
-            // جلب السلة بمنتجاتها
-            var cart = await _context.Carts
-                .Include(c => c.CartItems)
-                .ThenInclude(ci => ci.Product)
-                .FirstOrDefaultAsync(c => c.UserId == userId);
+     if (string.IsNullOrEmpty(userId)) return Unauthorized("يجب تسجيل الدخول أولاً"); 
 
-            if (cart == null || !cart.CartItems.Any())
-                return BadRequest("عفواً، السلة فارغة لا يمكن إتمام الطلب.");
+     var cart = await _context.Carts
+         .Include(c => c.CartItems)
+         .ThenInclude(ci => ci.Product)
+         .FirstOrDefaultAsync(c => c.UserId == userId); 
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+     if (cart == null || !cart.CartItems.Any())
+                return BadRequest("عفواً، السلة فارغة لا يمكن إتمام الطلب."); 
+
+     using var transaction = await _context.Database.BeginTransactionAsync(); 
+     try
             {
-                // حساب الإجمالي من أسعار المنتجات الحالية
-                decimal total = cart.CartItems.Sum(item => item.Product.Price * item.Quantity);
+                // حساب الإجمالي
+                decimal total = cart.CartItems.Sum(item => item.Product.Price * item.Quantity); 
 
-                // إنشاء سجل الأوردر
-                var order = new Order
-                {
-                    BuyerId = userId,
-                    OrderDate = DateTime.Now,
-                    Status = "Pending",
-                    TotalPrice = total
-                };
+         var order = new Order
+         {
+             BuyerId = userId, // المسمى الصح في الموديل بتاعك هو BuyerId
+             OrderDate = DateTime.Now,
+             
+             TotalPrice = total, // المسمى الصح في الموديل بتاعك هو TotalPrice
+             Status = "Pending"
+         };
 
-                _context.Orders.Add(order);
-                await _context.SaveChangesAsync();
+                _context.Orders.Add(order); 
+         await _context.SaveChangesAsync(); // هنا الـ OrderId بيتولد تلقائياً
 
-                // نقل المنتجات لجدول الربط (OrderProd)
+                // نقل المنتجات لجدول OrderProd وتحديث المخزن
                 foreach (var item in cart.CartItems)
                 {
                     var orderProd = new OrderProd
                     {
                         OrderId = order.OrderId,
+       
                         ProductId = item.ProductId,
-                        // Quantity = item.Quantity // ضيفيها لو الجدول عندك بيدعم كمية لكل منتج
+                        
+       
+                        Quantity = item.Quantity,
+                       
+       
+                        UnitPrice = item.Product.Price // تخزين السعر وقت الشراء
                     };
-                    _context.OrderProducts.Add(orderProd);
-                }
+                    _context.OrderProducts.Add(orderProd); 
 
-                // تصفير السلة بعد نجاح العملية
-                _context.CartItems.RemoveRange(cart.CartItems);
+             // تحديث الكمية في المخزن (مهم جداً)
+             item.Product.Quantity -= item.Quantity; 
+         }
 
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
+                // تصفير السلة
+                _context.CartItems.RemoveRange(cart.CartItems); 
 
-                return Ok(new
-                {
-                    message = "تم تسجيل الطلب بنجاح وتفريغ السلة",
-                    orderId = order.OrderId,
-                    totalAmount = total
-                });
-            }
+         await _context.SaveChangesAsync();
+         await transaction.CommitAsync(); 
+
+         return Ok(new { OrderId = order.OrderId, Message = "تمت العملية بنجاح وتفريغ السلة" }); 
+     }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
-                return BadRequest($"حدث خطأ: {ex.Message}");
-            }
+                await transaction.RollbackAsync(); 
+         return StatusCode(500, $"حدث خطأ أثناء إتمام الطلب: {ex.Message}"); 
+     }
         }
 
         // 2. جلب أوردر محدد بالتفاصيل
@@ -151,6 +156,31 @@ namespace TIKNA.Controllers
             await _context.SaveChangesAsync();
 
             return Ok("تم إلغاء الطلب بنجاح.");
+        }
+
+
+        // 6. جلب الطلبات الواردة للشركة (التي تحتوي على منتجاتها)
+        [HttpGet("IncomingOrders")]
+        public async Task<ActionResult> GetIncomingOrders()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            // جلب الطلبات التي تحتوي على منتجات تابعة لهذا المستخدم (الشركة)
+            var incomingOrders = await _context.OrderProducts
+                .Where(op => op.Product.ApplicationUserId == userId)
+                .OrderByDescending(op => op.Order.OrderDate)
+                .Select(op => new
+                {
+                    OrderId = op.OrderId,
+                    ProductName = op.Product.Name,
+                    BuyerName = op.Order.Buyer.Name, // تأكدي من وجود خاصية FullName في الـ User
+                    OrderDate = op.Order.OrderDate,
+                    Price = op.Product.Price,
+                    Status = op.Order.Status
+                })
+                .ToListAsync();
+
+            return Ok(incomingOrders);
         }
     }
 }

@@ -10,7 +10,7 @@ using TIKNA.Data;
 
 namespace Tikna.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[controller]")] // هذا يجعل المسار الأساسي api/Product
     [ApiController]
     public class ProductsController : ControllerBase
     {
@@ -91,9 +91,10 @@ namespace Tikna.Controllers
                 return BadRequest(new { message = "حدث خطأ أثناء الحفظ", error = ex.Message });
             }
         }
+        [Authorize]
+        [HttpGet("GetProducts")]
 
-        // 5. عرض المنتجات مع جلب اسم المالك
-        [HttpGet("GetProducts") ]
+        [AllowAnonymous]
         public async Task<IActionResult> GetProducts()
         {
             var products = await _context.Products
@@ -105,17 +106,20 @@ namespace Tikna.Controllers
                     p.Brand,
                     p.Model,
                     p.Price,
+                    p.Quantity, // <--- ضيفي السطر ده هنا فوراً!
                     p.ImageUrl,
-                    OwnerName = p.Owner.Name,
-                    p.Category
+                    p.Category,
+                    p.ForSale,
+                    p.ForRent,
+                    p.RentalPricePerDay,
+                    OwnerName = p.Owner.Name ?? "مستخدم تيكنا"
                 })
                 .ToListAsync();
 
             return Ok(products);
         }
 
-
-        // 6. جلب تفاصيل منتج واحد بناءً على الـ ID
+        // 3. جلب تفاصيل منتج واحد (محسن)
         [HttpGet("GetProductById/{id}")]
         public async Task<IActionResult> GetProductById(int id)
         {
@@ -126,7 +130,6 @@ namespace Tikna.Controllers
             if (product == null)
                 return NotFound(new { message = "الجهاز غير موجود" });
 
-            // إرجاع كل التفاصيل التي تحتاجها صفحة العرض
             return Ok(new
             {
                 product.ProductId,
@@ -137,20 +140,133 @@ namespace Tikna.Controllers
                 product.Quantity,
                 product.Category,
                 product.Condition,
-                product.Description,
-                product.CPU,
-                product.RAM,
-                product.Storage,
-                product.GPU,
+                CPU = product.CPU,
+                RAM = product.RAM,
+                Storage = product.Storage,
+                GPU = product.GPU,
                 product.ScreenSize,
                 product.Color,
                 product.ImageUrl,
                 product.ForSale,
                 product.ForRent,
                 product.RentalPricePerDay,
-                OwnerName = product.Owner?.Name,
-                OwnerPhone = product.Owner?.PhoneNumber
+                OwnerName = product.Owner?.Name ?? "غير معروف",
+                OwnerPhone = product.Owner?.PhoneNumber ?? "غير متوفر"
             });
+
+        }
+
+
+
+        [Authorize]
+        [HttpPut("UpdateProduct/{id}")]
+        public async Task<IActionResult> UpdateProduct(int id, [FromForm] ProductDto dto)
+        {
+            // 1. الحصول على UserId للمستخدم الحالي
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            // 2. البحث عن المنتج والتأكد إنه يخص المستخدم الحالي
+            var product = await _context.Products.FirstOrDefaultAsync(p => p.ProductId == id && p.ApplicationUserId == userId);
+
+            if (product == null)
+                return NotFound(new { message = "الجهاز غير موجود أو ليس لديك صلاحية تعديله" });
+
+            // 3. تحديث البيانات الأساسية
+            product.Name = dto.Name;
+            product.Brand = dto.Brand;
+            product.Model = dto.Model;
+            product.Price = dto.Price;
+            product.Quantity = dto.Quantity;
+            product.Category = dto.Category;
+            product.Condition = dto.Condition;
+            product.Description = dto.Description;
+            product.CPU = dto.Processor;
+            product.RAM = dto.Ram;
+            product.Storage = dto.Storage;
+            product.GPU = dto.GraphicsCard;
+            product.ScreenSize = dto.Screen;
+            product.ForSale = dto.ForSale;
+            product.ForRent = dto.ForRent;
+            product.RentalPricePerDay = dto.RentalPricePerDay;
+
+            // 4. معالجة الصورة الجديدة (لو رفع صورة جديدة)
+            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+            {
+                // مسح الصورة القديمة لو مش هي الصورة الافتراضية
+                if (product.ImageUrl != "default_product.png")
+                {
+                    var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Images", product.ImageUrl);
+                    if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
+                }
+
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(dto.ImageFile.FileName);
+                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Images", fileName);
+
+                using (var stream = new FileStream(fullPath, FileMode.Create))
+                {
+                    await dto.ImageFile.CopyToAsync(stream);
+                }
+                product.ImageUrl = fileName;
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "تم تحديث بيانات الجهاز بنجاح" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "حدث خطأ أثناء التعديل", error = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpGet("GetMyProducts")]
+        public async Task<IActionResult> GetMyProducts()
+        {
+            // 1. الحصول على الـ ID الخاص بالمستخدم الحالي من التوكن
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (userId == null)
+                return Unauthorized(new { message = "يجب تسجيل الدخول أولاً" });
+
+            // 2. جلب المنتجات التي يملكها هذا المستخدم فقط
+            var myProducts = await _context.Products
+                .Where(p => p.ApplicationUserId == userId) // الفلترة هنا هي السر
+                .OrderByDescending(p => p.CreatedAt) // عرض الأحدث أولاً
+                .Select(p => new {
+                    p.ProductId,
+                    p.Name,
+                    p.Brand,
+                    p.Model,
+                    p.Price,
+                    p.Quantity,
+                    p.ImageUrl,
+                    p.Category,
+                    p.IsActive, // عشان تعرفي الجهاز متاح ولا لأ
+                    p.ForSale,
+                    p.ForRent,
+                    p.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(myProducts);
+        }
+       
+        [Authorize]
+        [HttpDelete("DeleteProduct/{id}")]
+        public async Task<IActionResult> DeleteProduct(int id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var product = await _context.Products.FirstOrDefaultAsync(p => p.ProductId == id && p.ApplicationUserId == userId);
+
+            if (product == null) return NotFound();
+
+            // بدلاً من Remove، نغير الحالة فقط
+            product.IsActive = false;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "تم إخفاء المنتج بنجاح" });
         }
     }
 }

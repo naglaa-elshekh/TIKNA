@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Emit;
 using TIKNA.Models;
 
 namespace TIKNA.Data
@@ -98,6 +99,20 @@ namespace TIKNA.Data
                 .WithMany()
                 .HasForeignKey(ci => ci.ProductId)
                 .OnDelete(DeleteBehavior.NoAction);
+            builder.Entity<MaintenanceRequest>()
+        .HasOne(m => m.Student) // يجب أن يطابق الاسم في الموديل فوق
+        .WithMany(u => u.MaintenanceRequests)
+        .HasForeignKey(m => m.UserId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+            // علاقة المركز
+            builder.Entity<MaintenanceRequest>()
+                .HasOne(m => m.Center) // يجب أن يطابق الاسم في الموديل فوق
+                .WithMany()
+                .HasForeignKey(m => m.CenterId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
 
             // 5. ضبط الدقة المالية والـ Enums
             builder.Entity<Product>().Property(p => p.Price).HasPrecision(18, 2);

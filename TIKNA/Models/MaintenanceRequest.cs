@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TIKNA.Models
 {
@@ -7,47 +8,65 @@ namespace TIKNA.Models
         [Key]
         public int Id { get; set; }
 
+        public string UserId { get; set; }
 
-
-        public string UserId { get; set; } // عشان نعرف مين الطالب اللي بعت
-
-        [Required]
-        public string OrderNumber { get; set; } // رقم الطلب (مثلاً TIKNA-M-123)
-
-        // --- بيانات الجهاز (من أول صور الفرونت) ---
-        [Required]
-        public string Brand { get; set; } // الماركة (Dell, HP, etc.)
+        [ForeignKey("UserId")]
+        public virtual ApplicationUser Student { get; set; }
 
         [Required]
-        public string ModelName { get; set; } // اسم الموديل
-
-        public string DeviceAge { get; set; } // عمر الجهاز (سنة، سنتين...)
-
-        // --- تفاصيل المشكلة ---
-        [Required]
-        public string ProblemType { get; set; } // نوع العطل (Hardware, Software, Screen)
+        public string OrderNumber { get; set; }
 
         [Required]
-        public string Description { get; set; } // وصف المشكلة التفصيلي
+        public string Brand { get; set; }
 
-        // --- خيارات الخدمة والموعد (من الصور الأخيرة) ---
-        public string ServiceType { get; set; } // (في المركز، صيانة منزلية، استلام وتوصيل)
+        [Required]
+        public string ModelName { get; set; }
+
+        public string DeviceAge { get; set; }
+
+        [Required]
+        public string ProblemType { get; set; }
+
+        [Required]
+        public string Description { get; set; }
+
+        public string ServiceType { get; set; }
 
         [DataType(DataType.Date)]
-        public DateTime PreferredDate { get; set; } // التاريخ اللي اختاره الطالب
+        public DateTime PreferredDate { get; set; }
 
-        public string PreferredTimeSlot { get; set; } // الفترة (صباحاً، مساءً)
 
-        // --- الحسابات (للتكلفة التقريبية) ---
-        public decimal EstimatedPriceMin { get; set; } // السعر الأدنى المتوقع
-        public decimal EstimatedPriceMax { get; set; } // السعر الأقصى المتوقع
+        // --- الحسابات (التكلفة التقريبية تظهر عند الإنشاء) ---
+        public decimal EstimatedPriceMin { get; set; }
+        public decimal EstimatedPriceMax { get; set; }
 
-        // --- حالة الطلب ---
-        public string Status { get; set; } = "Pending"; // الحالة الافتراضية
+        // ************************************************************
+        // --- الحقول الجديدة التي كانت ناقصة لإتمام عملية الدفع ---
 
-        // الربط مع الدفع (اختياري حالياً)
-         public virtual Payment? Payment { get; set; }
-        public DateTime CreatedAt { get; internal set; }
-        public Product Product { get; internal set; }
+        // 1. السعر النهائي الذي يحدده المركز بعد الفحص الفعلي
+        public decimal? FinalPrice { get; set; }
+
+        // 2. ملاحظات من المركز يشرح فيها العطل للعميل قبل الدفع
+        public string? NoteFromCenter { get; set; }
+
+        // 3. حالة الدفع (تتحول لـ True بعد نجاح العملية في صفحة الدفع)
+        public bool IsPaid { get; set; } = false;
+
+        // 4. مسار صورة الجهاز (إذا قررتِ تفعيل رفع الصور)
+        public string? ImagePath { get; set; }
+        // ************************************************************
+
+        public string Status { get; set; } = "Pending";
+
+        public virtual Payment? Payment { get; set; }
+
+        public DateTime CreatedAt { get; set; } // تأكدي أنها set وليست internal لتتمكني من حفظها
+
+        // ربط الطلب بالشركة (المركز)
+        [Required]
+        public string CenterId { get; set; }
+
+        [ForeignKey("CenterId")]
+        public virtual ApplicationUser Center { get; set; }
     }
 }

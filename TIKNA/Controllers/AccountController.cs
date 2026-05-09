@@ -6,9 +6,10 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using TIKNA.Data;
 using TIKNA.DTOs;
 using TIKNA.Models;
-using TIKNA.Data;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace TIKNA.Controllers
 {
@@ -109,7 +110,8 @@ namespace TIKNA.Controllers
                     role = roles.FirstOrDefault(), // سيعود الآن بـ Student أو Company وليس Null
                     userType = user.UserType,
                     status = user.ApprovalStatus,
-                    fullName = user.Name
+                    fullName = user.Name,
+                    CompanyServiceType = user?.CompanyServiceType // هيبعت 'sales' أو 'maintenance'
                 });
             }
             return Unauthorized("بيانات الدخول غير صحيحة.");
@@ -197,6 +199,33 @@ namespace TIKNA.Controllers
                 });
             }
         }
+        [HttpGet("GetMaintenanceCenters")]
+        public async Task<IActionResult> GetMaintenanceCenters()
+        {
+            // 1. غيرنا "Center" لـ "Company" لتطابق كود الـ Register
+            // 2. شيلنا شرط الـ ApprovalStatus مؤقتاً عشان لو لسه الإدارة موافقتش يظهروا برضه للتجربة
+            var centers = await _userManager.Users
+                .Where(u => u.UserType == "Company")
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Name,
+                    u.Email,
+                    u.PhoneNumber,
+                    u.Address,
+                    u.ApprovalStatus, // ضيفنا ده عشان تعرفي حالته إيه في الفرونت
+                    u.CompanyServiceType
+                })
+                .ToListAsync();
+
+            if (!centers.Any())
+            {
+                return NotFound(new { message = "لا توجد شركات (Company) مسجلة حالياً في قاعدة البيانات" });
+            }
+
+            return Ok(centers);
+        }
+       
     }
 
 }

@@ -30,7 +30,8 @@ public class CartController : ControllerBase
             ProductName = ci.Product.Name,
             Price = ci.Product.Price,
             ImageUrl = ci.Product.ImageUrl,
-            Quantity = ci.Quantity
+            Quantity = ci.Quantity,
+            Stock = ci.Product.Quantity // جلب الكمية المتاحة من جدول المنتج
         }).ToList();
 
         return Ok(result);
@@ -122,5 +123,66 @@ public class CartController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(new { Message = "تم تفريغ السلة بنجاح" });
+    }
+    // 3. إضافة منتج واحد (لزرار "أضف للسلة" في صفحة المنتجات)
+    [HttpPost("AddItem")]
+    public async Task<IActionResult> AddItem([FromBody] CartItemUpdateDTO itemDto)
+    {
+        // 1. جلب معرف المستخدم الحالي من التوكن
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        // 2. التحقق من وجود المنتج في قاعدة البيانات ومعرفة الكمية المتاحة
+        var product = await _context.Products.FindAsync(itemDto.ProductId);
+        if (product == null)
+        {
+            return NotFound("عفواً، هذا المنتج غير موجود.");
+        }
+
+        // 3. التأكد من وجود سلة للمستخدم أو إنشاء واحدة جديدة
+        var cart = await _context.Carts.Include(c => c.CartItems)
+                                       .FirstOrDefaultAsync(c => c.UserId == userId);
+        if (cart == null)
+        {
+            cart = new Cart { UserId = userId };
+            _context.Carts.Add(cart);
+            await _context.SaveChangesAsync();
+        }
+
+        // 4. التحقق إذا كان المنتج موجود مسبقاً في السلة
+        var existingItem = cart.CartItems.FirstOrDefault(ci => ci.ProductId == itemDto.ProductId);
+
+        // حساب الكمية الإجمالية المطلوبة (الموجودة في السلة + الجديدة)
+        int totalRequestedQuantity = itemDto.Quantity + (existingItem?.Quantity ?? 0);
+
+        // 5. التحقق من المخزن: هل الكمية المطلوبة متوفرة؟
+        if (product.Quantity < totalRequestedQuantity)
+        {
+            return BadRequest($"عفواً، لا يمكن إضافة هذه الكمية. المتاح في المخزن حالياً هو {product.Quantity} قطعة فقط.");
+        }
+
+        if (existingItem != null)
+        {
+            // إذا كان المنتج موجوداً، نقوم بتحديث الكمية فقط
+            existingItem.Quantity = totalRequestedQuantity;
+        }
+        else
+        {
+            // إذا كان منتجاً جديداً، نقوم بإضافته للسلة
+            _context.CartItems.Add(new CartItem
+            {
+                CartId = cart.Id,
+                ProductId = itemDto.ProductId,
+                Quantity = itemDto.Quantity
+            });
+        }
+
+        // 6. حفظ التغييرات في قاعدة البيانات
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "تم إضافة المنتج للسلة بنجاح.",
+            currentCartQuantity = totalRequestedQuantity
+        });
     }
 }

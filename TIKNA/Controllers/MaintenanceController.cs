@@ -18,41 +18,24 @@ namespace TIKNA.Controllers
             _context = context;
         }
 
-        // 1. إنشاء طلب صيانة جديد (المتوافق مع الفرونت إند)
+        // --- 1. إنشاء طلب صيانة (كما هو - يعمل بنجاح) ---
         [HttpPost("Create")]
         public async Task<IActionResult> CreateRequest([FromForm] MaintenanceRequestDto dto)
         {
-            // الحصول على معرف المستخدم الحالي
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized(new { message = "يجب تسجيل الدخول أولاً" });
-            }
+            if (string.IsNullOrEmpty(userId)) return Unauthorized(new { message = "يجب تسجيل الدخول" });
 
-            // بيزنس لوجيك: منع تكرار الطلبات لنفس الجهاز وهي لسه تحت المراجعة
             var hasPendingRequest = await _context.MaintenanceRequests
-                .AnyAsync(r => r.UserId == userId
-                   && r.Brand == dto.Brand
-                   && r.ModelName == dto.ModelName
-                   && r.Status == MaintenanceStatus.Pending.ToString());
+                .AnyAsync(r => r.UserId == userId && r.Brand == dto.Brand && r.Status == "Pending");
 
-            if (hasPendingRequest)
-            {
-                return BadRequest(new { message = "لديك طلب صيانة معلق بالفعل لهذا النوع من الأجهزة" });
-            }
+            if (hasPendingRequest) return BadRequest(new { message = "لديك طلب معلق بالفعل" });
 
-            // توليد رقم طلب فريد
             var orderNumber = "TIKNA-M-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
-
-            // حساب التكلفة التقديرية (بناءً على نوع المشكلة المختارة في الفرونت)
-            decimal minPrice = 150;
-            decimal maxPrice = 500;
-
-            if (dto.ProblemType.Contains("Hardware")) { minPrice = 300; maxPrice = 1500; }
 
             var request = new MaintenanceRequest
             {
                 UserId = userId,
+                CenterId = dto.CenterId.ToString(),
                 OrderNumber = orderNumber,
                 Brand = dto.Brand,
                 ModelName = dto.ModelName,
@@ -61,47 +44,67 @@ namespace TIKNA.Controllers
                 Description = dto.Description,
                 ServiceType = dto.ServiceType,
                 PreferredDate = dto.PreferredDate,
-                PreferredTimeSlot = dto.PreferredTimeSlot,
-                EstimatedPriceMin = minPrice,
-                EstimatedPriceMax = maxPrice,
-                Status = MaintenanceStatus.Pending.ToString(),
+                Status = "Pending",
                 CreatedAt = DateTime.Now
             };
 
             _context.MaintenanceRequests.Add(request);
             await _context.SaveChangesAsync();
 
-            return Ok(new
-            {
-                message = "تم استلام طلبك بنجاح",
-                orderNumber = orderNumber,
-                estimatedPrice = $"{minPrice} - {maxPrice} EGP"
-            });
+            return Ok(new { message = "تم الاستلام", orderNumber });
         }
 
-        // 2. عرض طلبات الصيانة الخاصة بالطالب الحالي
+        // --- 2. عرض طلبات العميل ---
         [HttpGet("MyRequests")]
         public async Task<IActionResult> GetMyRequests()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var requests = await _context.MaintenanceRequests
-                .Where(r => r.UserId == userId)
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync();
-
-            return Ok(requests);
+            return Ok(await _context.MaintenanceRequests.Where(r => r.UserId == userId).ToListAsync());
         }
 
-        // 3. عرض تفاصيل طلب معين برقم الطلب
+        // --- 3. تفاصيل الطلب ---
         [HttpGet("Details/{orderNumber}")]
         public async Task<IActionResult> GetRequestDetails(string orderNumber)
         {
-            var request = await _context.MaintenanceRequests
-                .FirstOrDefaultAsync(r => r.OrderNumber == orderNumber);
+            var request = await _context.MaintenanceRequests.FirstOrDefaultAsync(r => r.OrderNumber == orderNumber);
+            return request == null ? NotFound() : Ok(request);
+        }
 
-            if (request == null) return NotFound(new { message = "الطلب غير موجود" });
+        // --- 4. جلب طلبات المركز (لوحة تحكم الشركة) ---
+        [HttpGet("CenterRequests")]
+        public async Task<IActionResult> GetCenterRequests()
+        {
+            var centerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return Ok(await _context.MaintenanceRequests.Where(r => r.CenterId == centerId).ToListAsync());
+        }
 
-            return Ok(request);
+        // --- 5. تحديث السعر من المركز (الخطوة التي تسبق الدفع) ---
+        [HttpPut("UpdatePrice/{orderNumber}")]
+        public async Task<IActionResult> UpdatePrice(string orderNumber, [FromBody] MaintenanceUpdateDto updateDto)
+        {
+            var request = await _context.MaintenanceRequests.FirstOrDefaultAsync(r => r.OrderNumber == orderNumber);
+            if (request == null) return NotFound();
+
+            request.FinalPrice = updateDto.FinalPrice;
+            request.Status = "AwaitingPayment"; // تغيير الحالة لتنبيه العميل بالدفع
+            request.NoteFromCenter = updateDto.Note;
+            _context.Entry(request).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "تم إرسال السعر للعميل" });
+        }
+
+        // --- 6. تأكيد عملية الدفع (تستدعى بعد نجاح الدفع في صفحتك الموحدة) ---
+        [HttpPost("ConfirmPayment/{orderNumber}")]
+        public async Task<IActionResult> ConfirmPayment(string orderNumber)
+        {
+            var request = await _context.MaintenanceRequests.FirstOrDefaultAsync(r => r.OrderNumber == orderNumber);
+            if (request == null) return NotFound();
+
+            request.Status = "Paid"; // تحويل الحالة لمدفوع لبدء الإصلاح
+            request.IsPaid = true;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "تم تحديث حالة الطلب إلى مدفوع" });
         }
     }
 }

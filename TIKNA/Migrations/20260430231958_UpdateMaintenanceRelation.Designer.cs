@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TIKNA.Data;
 
@@ -11,9 +12,11 @@ using TIKNA.Data;
 namespace TIKNA.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260430231958_UpdateMaintenanceRelation")]
+    partial class UpdateMaintenanceRelation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -371,16 +374,16 @@ namespace TIKNA.Migrations
                             AccessFailedCount = 0,
                             Address = "Main Admin Office",
                             ApprovalStatus = "Approved",
-                            ConcurrencyStamp = "c90040e0-8594-4b10-80cd-9eb1cbe50f5b",
+                            ConcurrencyStamp = "d2244a8a-af28-4383-bca4-6a22e8be1347",
                             Email = "admin@tikna.com",
                             EmailConfirmed = true,
                             LockoutEnabled = false,
                             Name = "System Admin",
                             NormalizedEmail = "ADMIN@TIKNA.COM",
                             NormalizedUserName = "ADMIN@TIKNA.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEO+hUFKIFNtIUQqMNUl4TPuNKI+vqgYPMTYYkpbFET5XHyUKCNyPlnTl6hVbcD+w+Q==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEMDWPHjz724G2uyz5X3C+L7oQwwLVE9nBze5DcAII5+y2kKUIq4alaRvPEJQf21SXw==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "4ed5774d-b9eb-492a-acdc-c0c10500d6cb",
+                            SecurityStamp = "500fd356-59ba-4436-9b9b-299db109f697",
                             TwoFactorEnabled = false,
                             UserName = "admin@tikna.com",
                             UserType = "Admin"
@@ -468,20 +471,8 @@ namespace TIKNA.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal?>("FinalPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("ImagePath")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsPaid")
-                        .HasColumnType("bit");
-
                     b.Property<string>("ModelName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NoteFromCenter")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OrderNumber")
@@ -491,11 +482,15 @@ namespace TIKNA.Migrations
                     b.Property<DateTime>("PreferredDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("PreferredTimeSlot")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ProblemType")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("ProductId")
+                    b.Property<int>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<string>("ServiceType")
@@ -800,9 +795,11 @@ namespace TIKNA.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Product", null)
+                    b.HasOne("Product", "Product")
                         .WithMany("MaintenanceRequests")
-                        .HasForeignKey("ProductId");
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("TIKNA.Models.ApplicationUser", "Student")
                         .WithMany("MaintenanceRequests")
@@ -811,6 +808,8 @@ namespace TIKNA.Migrations
                         .IsRequired();
 
                     b.Navigation("Center");
+
+                    b.Navigation("Product");
 
                     b.Navigation("Student");
                 });

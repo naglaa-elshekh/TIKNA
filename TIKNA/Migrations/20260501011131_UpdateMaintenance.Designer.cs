@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TIKNA.Data;
 
@@ -11,9 +12,11 @@ using TIKNA.Data;
 namespace TIKNA.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260501011131_UpdateMaintenance")]
+    partial class UpdateMaintenance
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -371,16 +374,16 @@ namespace TIKNA.Migrations
                             AccessFailedCount = 0,
                             Address = "Main Admin Office",
                             ApprovalStatus = "Approved",
-                            ConcurrencyStamp = "c90040e0-8594-4b10-80cd-9eb1cbe50f5b",
+                            ConcurrencyStamp = "e510ab46-d27f-4187-8fd3-40759f53545a",
                             Email = "admin@tikna.com",
                             EmailConfirmed = true,
                             LockoutEnabled = false,
                             Name = "System Admin",
                             NormalizedEmail = "ADMIN@TIKNA.COM",
                             NormalizedUserName = "ADMIN@TIKNA.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEO+hUFKIFNtIUQqMNUl4TPuNKI+vqgYPMTYYkpbFET5XHyUKCNyPlnTl6hVbcD+w+Q==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEEbkfOpKWoCnRNHxiBB/n2dLkYWnccUnSXLh2NtrmQiWPZ1+YOIvS1x4Ioroo1WXhA==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "4ed5774d-b9eb-492a-acdc-c0c10500d6cb",
+                            SecurityStamp = "893fd52c-46fb-48db-8eb1-e475a60e27e5",
                             TwoFactorEnabled = false,
                             UserName = "admin@tikna.com",
                             UserType = "Admin"
@@ -490,6 +493,10 @@ namespace TIKNA.Migrations
 
                     b.Property<DateTime>("PreferredDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("PreferredTimeSlot")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProblemType")
                         .IsRequired()
